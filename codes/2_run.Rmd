@@ -10,7 +10,8 @@ outdir_best_hits_flanked <- file.path(outdir_best_hits, "flanked")
 
 outdir_mapping           <- file.path(currentdir, "02_mapping")
 outdir_variant_calls     <- file.path(currentdir, "03_variant_calling")
-sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_variant_calls), function(x) {
+outdir_haplotypes        <- file.path(currentdir, "04_haplotypes")
+sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_variant_calls, outdir_haplotypes), function(x) {
   if (!dir.exists(x)) { dir.create(x, recursive=T) }})
 ```
 
@@ -84,7 +85,39 @@ system(paste(params$exe_bcftools, "index", "-f", fn_snps_vcf_gz))
 
 # iterate over blocks
 for (i in seq_len(nrow(blocks))) {
+    # open target file
+    fn_refseq <- file.path(outdir_best_hits_flanked, paste0(blocks$locus[i], ".fna"))
+    refseq    <- Biostrings::readBStringSet(fn_refseq)
 
+    # extract variables
+    locus  <- blocks$locus[i]
+    ps     <- blocks$PS[i]
+    bstart <- blocks$from[i]
+    bend   <- blocks$to[i]
+    len    <- length(refseq[[1]])
 
+    # create a BED file
+    fn_mask_bed <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, ".mask.bed"))
+    mask        <- data.frame(chrom=locus, from=c(0, bend), to=c(bstart, len))
+    mask        <- mask[mask$from < mask$to, ] 
+    data.table::fwrite(mask, file=fn_mask_bed, sep="\t", quote=FALSE, col.names=F)
+
+    # run Bcftools consensus
+    fn_hap1 <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_h1.fna"))
+    fn_hap2 <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_h2.fna"))
+    f_generate_haplotypes(fn_target_loci = fn_target_loci_flanked,
+                          fn_bed         = fn_mask_bed,
+                          fn_snps_vcf    = fn_snps_vcf_gz,
+                          fn_hap1        = fn_hap1,
+                          fn_hap2        = fn_hap2,
+                          exe_bcftools   = params$bcftools)
+
+    # update the sequence header
+    for (h in c("h1", "h2")) {
+        fn_hap     <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_", h, ".fna"))
+        seq        <- Biostrings::readBStringSet(fn_hap)
+        names(seq) <- paste0(locus, "_PS", ps, "_", h)
+        Biostrings::writeXStringSet(seq, filepath=fn_hap)
+    }
 }
 ```

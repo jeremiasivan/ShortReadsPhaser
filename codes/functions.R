@@ -106,7 +106,7 @@ f_whatshap <- function(fn_target_loci, fn_vcf_gz_filtered, fn_bam, fn_phased_vcf
 }
 
 # function: generate haplotypes
-f_generate_haplotypes <- function(fn_target_loci, fn_phased_vcf, fn_hap1, fn_hap2, exe_bcftools) {
-    system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H 1pIu", fn_phased_vcf, ">", fn_hap1))
-    system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H 2pIu", fn_phased_vcf, ">", fn_hap2))
+f_generate_haplotypes <- function(fn_target_loci, fn_bed, fn_snps_vcf, fn_hap1, fn_hap2, exe_bcftools) {
+    system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H 1pIu", "-m", fn_bed, fn_snps_vcf, ">", fn_hap1))
+    system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H 2pIu", "-m", fn_bed, fn_snps_vcf, ">", fn_hap2))
 }
