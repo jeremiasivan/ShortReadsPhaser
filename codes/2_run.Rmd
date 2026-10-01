@@ -1,0 +1,90 @@
+---
+title: "Run ShortReadsPhaser"
+---
+
+```{r setup, include=FALSE}
+# create output directories
+outdir_best_hits         <- file.path(currentdir, "01_best_hits")
+outdir_best_hits_cds     <- file.path(outdir_best_hits, "cds")
+outdir_best_hits_flanked <- file.path(outdir_best_hits, "flanked")
+
+outdir_mapping           <- file.path(currentdir, "02_mapping")
+outdir_variant_calls     <- file.path(currentdir, "03_variant_calling")
+sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_variant_calls), function(x) {
+  if (!dir.exists(x)) { dir.create(x, recursive=T) }})
+```
+
+```{r}
+# extract CAPTUS best hits
+fn_target_loci_flanked <- file.path(outdir_best_hits, "target_loci_flanked.fna")
+fn_target_loci_cds     <- file.path(outdir_best_hits, "target_loci_cds.fna")
+f_extract_captus_best_hits(params$fn_query_matches_flanked, fn_target_loci_flanked)
+f_extract_captus_best_hits(params$fn_query_matches_cds, fn_target_loci_cds)
+
+# extract per-locus best hit
+f_split_captus_best_hits(fn_target_loci_flanked, params$sample, outdir_best_hits_flanked)
+f_split_captus_best_hits(fn_target_loci_cds, params$sample, outdir_best_hits_cds)
+```
+
+```{r mapping-variants}
+# retrieve FASTQ files
+fn_fastq_r1 <- file.path(params$dir_fastq_gz, paste0(params$sample, "_R1.fastq.gz"))
+fn_fastq_r2 <- file.path(params$dir_fastq_gz, paste0(params$sample, "_R2.fastq.gz"))
+if (all(file.exists(fn_fastq_r1, fn_fastq_r2))) {
+    log4r::error(fn_logger, "Error: missing R1 and/or R2 FASTQ files. Exited.")
+    knitr::knit_exit()
+}
+
+# run BWA-MEM and sort/deduplicate reads
+fn_bam_sort  <- file.path(outdir_mapping, paste0(params$sample, ".sorted.bam"))
+fn_bam_dedup <- file.path(outdir_mapping, paste0(params$sample, ".dedup.bam"))
+fn_depth     <- file.path(outdir_mapping, "locus_depth.tsv")
+f_bwa_mem(fn_target_loci = fn_target_loci_flanked,
+          fn_fastq_r1    = fn_fastq_r1,
+          fn_fastq_r2    = fn_fastq_r2,
+          fn_bam_sort    = fn_bam_sort,
+          fn_bam_dedup   = fn_bam_dedup,
+          fn_depth       = fn_depth,
+          thread         = params$thread,
+          exe_bwa        = params$exe_bwa,
+          exe_samtools   = params$exe_samtools)
+
+# run Bcftools for variant calling
+fn_vcf_gz          <- file.path(outdir_variant_calls, paste0(params$sample, ".vcf.gz"))
+fn_filtered_vcf_gz <- file.path(outdir_variant_calls, paste0(params$sample, ".filtered.vcf.gz"))
+f_variant_calling(fn_target_loci     = fn_target_loci_flanked,
+                  fn_bam             = fn_bam_dedup,
+                  fn_vcf_gz          = fn_vcf_gz,
+                  fn_vcf_gz_filtered = fn_filtered_vcf_gz,
+                  min_depth          = 12,
+                  max_depth          = 150,
+                  thread             = params$thread,
+                  exe_bcftools       = params$exe_bcftools)
+```
+
+```{r whatshap}
+# run WhatsHap
+fn_phased_vcf      <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf"))
+fn_blocks_whatshap <- file.path(outdir_variant_calls, "blocks_whatshap.tsv")
+f_whatshap(fn_target_loci     = fn_target_loci_flanked,
+           fn_vcf_gz_filtered = fn_filtered_vcf_gz,
+           fn_bam             = fn_bam_dedup,
+           fn_phased_vcf      = fn_phased_vcf,
+           fn_blocks_whatshap = fn_blocks_whatshap
+           exe_whatshap       = params$exe_whatshap)
+
+# generate putative haplotypes
+df_blocks_whatshap <- data.table::fread(fn_blocks_whatshap)
+colnames(df_blocks_whatshap) <- c("sample", "locus", "PS", "from", "to", "variants")
+
+# exclude indels
+fn_snps_vcf_gz <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.snps.vcf.gz"))
+system(paste(params$exe_bcftools, "view", "-v snps -Oz", "-o", fn_snps_vcf_gz, fn_phased_vcf))
+system(paste(params$exe_bcftools, "index", "-f", fn_snps_vcf_gz))
+
+# iterate over blocks
+for (i in seq_len(nrow(blocks))) {
+
+
+}
+```
