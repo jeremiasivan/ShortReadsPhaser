@@ -18,9 +18,10 @@ params:
   redo: FALSE
   
   # --- Executables ---------------------------------------------
-  exe_bcftools: ""
+  exe_bcftools: "bcftools"
   exe_bwa: "bwa"
-  exe_samtools: ""
+  exe_samtools: "samtools"
+  exe_whatshap: "whatshap"
 
   # --- Input Files ---------------------------------------------
   dir_backbone_alignment: ""

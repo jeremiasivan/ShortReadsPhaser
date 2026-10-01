@@ -31,7 +31,7 @@ f_split_captus_best_hits(fn_target_loci_cds, params$sample, outdir_best_hits_cds
 # retrieve FASTQ files
 fn_fastq_r1 <- file.path(params$dir_fastq_gz, paste0(params$sample, "_R1.fastq.gz"))
 fn_fastq_r2 <- file.path(params$dir_fastq_gz, paste0(params$sample, "_R2.fastq.gz"))
-if (all(file.exists(fn_fastq_r1, fn_fastq_r2))) {
+if (!all(file.exists(fn_fastq_r1, fn_fastq_r2))) {
     log4r::error(fn_logger, "Error: missing R1 and/or R2 FASTQ files. Exited.")
     knitr::knit_exit()
 }
@@ -66,12 +66,13 @@ f_variant_calling(fn_target_loci     = fn_target_loci_flanked,
 ```{r whatshap}
 # run WhatsHap
 fn_phased_vcf      <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf"))
+fn_phased_vcf_gz   <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf.gz"))
 fn_blocks_whatshap <- file.path(outdir_variant_calls, "blocks_whatshap.tsv")
 f_whatshap(fn_target_loci     = fn_target_loci_flanked,
            fn_vcf_gz_filtered = fn_filtered_vcf_gz,
            fn_bam             = fn_bam_dedup,
            fn_phased_vcf      = fn_phased_vcf,
-           fn_blocks_whatshap = fn_blocks_whatshap
+           fn_blocks_whatshap = fn_blocks_whatshap,
            exe_whatshap       = params$exe_whatshap)
 
 # generate putative haplotypes
@@ -80,11 +81,11 @@ colnames(df_blocks_whatshap) <- c("sample", "locus", "PS", "from", "to", "varian
 
 # exclude indels
 fn_snps_vcf_gz <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.snps.vcf.gz"))
-system(paste(params$exe_bcftools, "view", "-v snps -Oz", "-o", fn_snps_vcf_gz, fn_phased_vcf))
+system(paste(params$exe_bcftools, "view", "-v snps -Oz", "-o", fn_snps_vcf_gz, fn_phased_vcf_gz))
 system(paste(params$exe_bcftools, "index", "-f", fn_snps_vcf_gz))
 
 # iterate over blocks
-for (i in seq_len(nrow(blocks))) {
+for (i in seq_len(nrow(df_blocks_whatshap))) {
     # open target file
     fn_refseq <- file.path(outdir_best_hits_flanked, paste0(blocks$locus[i], ".fna"))
     refseq    <- Biostrings::readBStringSet(fn_refseq)
@@ -98,19 +99,19 @@ for (i in seq_len(nrow(blocks))) {
 
     # create a BED file
     fn_mask_bed <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, ".mask.bed"))
-    mask        <- data.frame(chrom=locus, from=c(0, bend), to=c(bstart, len))
+    mask        <- data.frame(chrom=locus, from=c(0, bend), to=c(bstart-1, len))
     mask        <- mask[mask$from < mask$to, ] 
     data.table::fwrite(mask, file=fn_mask_bed, sep="\t", quote=FALSE, col.names=F)
 
     # run Bcftools consensus
     fn_hap1 <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_h1.fna"))
     fn_hap2 <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_h2.fna"))
-    f_generate_haplotypes(fn_target_loci = fn_target_loci_flanked,
+    f_generate_haplotypes(fn_target_loci = fn_refseq,
                           fn_bed         = fn_mask_bed,
                           fn_snps_vcf    = fn_snps_vcf_gz,
                           fn_hap1        = fn_hap1,
                           fn_hap2        = fn_hap2,
-                          exe_bcftools   = params$bcftools)
+                          exe_bcftools   = params$exe_bcftools)
 
     # update the sequence header
     for (h in c("h1", "h2")) {

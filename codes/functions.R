@@ -20,14 +20,13 @@ f_extract_captus_best_hits <- function(fn_captus_matches, fn_out) {
 }
 
 # function: create individual files for each locus
-f_split_captus_best_hits <- function(fn_captus_best_hits, sample, outdir) {
+f_split_captus_best_hits <- function(fn_captus_best_hits, outdir) {
     # open the CAPTUS output
     seq <- Biostrings::readBStringSet(fn_captus_best_hits)
 
     # extract individual loci
     for (locus in names(seq)) {
         subseq <- seq[locus]
-        names(subseq) <- sample
 
         # save the FASTA sequence
         fn_out <- file.path(outdir, paste0(locus, ".fna"))
@@ -50,8 +49,8 @@ f_bwa_mem <-  function(fn_target_loci, fn_fastq_r1, fn_fastq_r2, fn_bam_sort, fn
                      "-R '@RG\\tID:sample1\\tSM:sample1'",
                      fn_target_loci,
                      fn_fastq_r1, fn_fastq_r2,
-                     "|", exe_samtools, "fixmate -m", samtools_thread, "- -"
-                     "|", exe_samtools, "sort", samtools_thread, "-o", fn_bam, "-")
+                     "|", exe_samtools, "fixmate -m", samtools_thread, "- -",
+                     "|", exe_samtools, "sort", samtools_thread, "-o", fn_bam_sort, "-")
     system(cmd_bwa)
 
     # deduplicate reads
@@ -83,7 +82,7 @@ f_variant_calling <- function(fn_target_loci, fn_bam, fn_vcf_gz, fn_vcf_gz_filte
     cmd_vcf_filter <- paste(exe_bcftools, "view",
                             "-m2 -M2 -i 'QUAL>=30 &&", paste0("INFO/DP>=", min_depth), "&&", paste0("INFO/DP<=", max_depth, "'"),
                             fn_vcf_gz,
-                            "|", exe_bcftools, "filter", "-e 'GT="het" && (FMT/AD[0:1] < 0.2*FMT/DP || FMT/AD[0:1] > 0.8*FMT/DP)'", "-s LOWAB",
+                            "|", exe_bcftools, "filter", "-e 'GT=\"het\" && (FMT/AD[0:1] < 0.2*FMT/DP || FMT/AD[0:1] > 0.8*FMT/DP)'", "-s LOWAB",
                             "|", exe_bcftools, "view", "-f PASS,. -Oz", "-o", fn_vcf_gz_filtered)
     system(cmd_vcf_filter)
     system(paste(exe_bcftools, "index -t", fn_vcf_gz_filtered))
