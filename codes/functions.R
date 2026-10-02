@@ -98,7 +98,7 @@ f_whatshap <- function(fn_target_loci, fn_vcf_gz_filtered, fn_bam, fn_phased_vcf
     system(cmd_whatshap)
 
     # compressed the output file
-    system(paste("bgzip -f", fn_phased_vcf, "&&", "tabix -p vcf", paste0(fn_phased_vcf, ".gz")))
+    system(paste("bgzip -f", fn_phased_vcf, "&&", "tabix -f -p vcf", paste0(fn_phased_vcf, ".gz")))
 
     # extract variant coordinates
     system(paste(exe_whatshap, "stats --block-list", fn_blocks_whatshap, paste0(fn_phased_vcf, ".gz")))
@@ -108,4 +108,62 @@ f_whatshap <- function(fn_target_loci, fn_vcf_gz_filtered, fn_bam, fn_phased_vcf
 f_generate_haplotypes <- function(fn_target_loci, fn_bed, fn_snps_vcf, fn_hap1, fn_hap2, exe_bcftools) {
     system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H 1pIu", "-m", fn_bed, fn_snps_vcf, ">", fn_hap1))
     system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H 2pIu", "-m", fn_bed, fn_snps_vcf, ">", fn_hap2))
+}
+
+# function: extract exon coordinates from a flanked sequence (source: Claude)
+f_locate_exons <- function(fn_cds, fn_flanked) {
+    # open the sequences
+    cds <- toupper(as.character(Biostrings::readBStringSet(fn_cds)[[1]]))
+    ref <- toupper(as.character(Biostrings::readBStringSet(fn_flanked)[[1]]))
+
+    # check if flanked sequence is + or - strand
+    best <- NULL
+    for (strand in c("+", "-")) {
+        # check the strand and reverse complement if necessary
+        query <- ifelse (strand == "+",
+                         ref,
+                         as.character(Biostrings::reverseComplement(Biostrings::BStringSet(ref))))
+
+        # align the CDS to the flanked reference
+        aln <- Biostrings::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(query))
+
+        # extract the aligned positions and calculate identity
+        p <- unlist(strsplit(as.character(Biostrings::pattern(aln)), ""))     # aligned CDS
+        q <- unlist(strsplit(as.character(Biostrings::subject(aln)), ""))     # aligned flanked
+
+        # extract the starting position of the aligned sites
+        ref_pos   <- cumsum(q != "-") + Biostrings::start(Biostrings::subject(aln)) - 1
+        mapped    <- p != "-" & q != "-"
+        positions <- ref_pos[mapped]
+        identity  <- mean(p[mapped] == q[mapped])
+        if (is.null(best) || length(positions) > length(best$positions)) {
+            best <- list(strand=strand, positions=positions, identity=identity, unmapped=sum(p != "-" & q == "-"))
+        }
+    }
+
+    # accept only if high identity
+    if (length(best$positions) < 0.9*nchar(cds) || best$identity < 0.95) {
+        return(NULL)
+    }
+
+    # extract consecutive positions
+    breaks <- which(diff(best$positions) != 1)
+    df_output <- data.table::data.table(strand=best$strand, identity=round(best$identity, 4), unmapped=best$unmapped,
+                                        start=best$positions[c(1, breaks + 1)], end=best$positions[c(breaks, length(best$positions))])
+
+    return (df_output)
+}
+
+# function: extract exons out of a haplotype sequence (source: Claude)
+f_extract_cds <- function(fn_hap, exons) {
+    # open the haplotype sequence
+    hap <- Biostrings::readBStringSet(fn_hap)
+    seq <- toupper(as.character(hap[[1]]))
+    if (exons$strand[1] == "-") {
+        seq <- as.character(Biostrings::reverseComplement(Biostrings::BStringSet(seq)))
+    }
+
+    # extract the coding sequence
+    cds <- Biostrings::BStringSet(setNames(paste(substring(seq, exons$start, exons$end), collapse=""), names(hap)[1]))
+    return(cds)
 }

@@ -11,7 +11,8 @@ outdir_best_hits_flanked <- file.path(outdir_best_hits, "flanked")
 outdir_mapping           <- file.path(currentdir, "02_mapping")
 outdir_variant_calls     <- file.path(currentdir, "03_variant_calling")
 outdir_haplotypes        <- file.path(currentdir, "04_haplotypes")
-sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_variant_calls, outdir_haplotypes), function(x) {
+outdir_blocks_cds        <- file.path(currentdir, "05_blocks_cds")
+sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_variant_calls, outdir_haplotypes, outdir_blocks_cds), function(x) {
   if (!dir.exists(x)) { dir.create(x, recursive=T) }})
 ```
 
@@ -23,8 +24,8 @@ f_extract_captus_best_hits(params$fn_query_matches_flanked, fn_target_loci_flank
 f_extract_captus_best_hits(params$fn_query_matches_cds, fn_target_loci_cds)
 
 # extract per-locus best hit
-f_split_captus_best_hits(fn_target_loci_flanked, params$sample, outdir_best_hits_flanked)
-f_split_captus_best_hits(fn_target_loci_cds, params$sample, outdir_best_hits_cds)
+f_split_captus_best_hits(fn_target_loci_flanked, outdir_best_hits_flanked)
+f_split_captus_best_hits(fn_target_loci_cds, outdir_best_hits_cds)
 ```
 
 ```{r mapping-variants}
@@ -87,14 +88,14 @@ system(paste(params$exe_bcftools, "index", "-f", fn_snps_vcf_gz))
 # iterate over blocks
 for (i in seq_len(nrow(df_blocks_whatshap))) {
     # open target file
-    fn_refseq <- file.path(outdir_best_hits_flanked, paste0(blocks$locus[i], ".fna"))
+    fn_refseq <- file.path(outdir_best_hits_flanked, paste0(df_blocks_whatshap$locus[i], ".fna"))
     refseq    <- Biostrings::readBStringSet(fn_refseq)
 
     # extract variables
-    locus  <- blocks$locus[i]
-    ps     <- blocks$PS[i]
-    bstart <- blocks$from[i]
-    bend   <- blocks$to[i]
+    locus  <- df_blocks_whatshap$locus[i]
+    ps     <- df_blocks_whatshap$PS[i]
+    bstart <- df_blocks_whatshap$from[i]
+    bend   <- df_blocks_whatshap$to[i]
     len    <- length(refseq[[1]])
 
     # create a BED file
@@ -121,4 +122,56 @@ for (i in seq_len(nrow(df_blocks_whatshap))) {
         Biostrings::writeXStringSet(seq, filepath=fn_hap)
     }
 }
+```
+
+```{r block-cds}
+# output variables
+df_exons  <- data.table::data.table()
+ls_failed <- c()
+
+# extract list of loci
+ls_locus <- list.files(outdir_best_hits_flanked, pattern="\\.fna$", recursive=F, full.names=F)
+ls_locus <- gsub("\\.fna$", "", ls_locus)
+
+# iterate over loci
+for (locus in ls_locus) {
+    # input files
+    fn_cds     <- file.path(outdir_best_hits_cds, paste0(locus, ".fna"))
+    fn_flanked <- file.path(outdir_best_hits_flanked, paste0(locus, ".fna"))
+    if (!file.exists(fn_cds)) {
+        ls_failed <- c(ls_failed, paste0(locus, ": no CDS best hit"))
+        next
+    }
+
+    # extract exon coordinates
+    exons <- f_locate_exons(fn_cds, fn_flanked)
+    if (is.null(exons)) {
+        ls_failed <- c(ls_failed, paste0(locus, ": CDS could not be aligned to the flanked sequence"))
+        next
+    }
+
+    # update the output data.frame
+    df_exons <- rbind(df_exons, data.table::data.table(locus=locus, exon=seq_len(nrow(exons)), exons))
+
+    # cextract the CDS out of every block haplotype of this locus
+    fn_haps <- list.files(outdir_haplotypes, pattern=paste0("^", locus, "\\.PS.*_h[12]\\.fna$"), full.names=TRUE)
+    if (length(fn_haps) == 0) {
+        next
+    }
+
+    # combine all CDS
+    block_cds <- do.call(c, lapply(fn_haps, f_extract_cds, exons=exons))
+    Biostrings::writeXStringSet(block_cds, filepath=file.path(outdir_block_cds, paste0(locus, ".fna")))
+}
+
+# save the exon table and the list of failed loci
+fn_exon_table  <- file.path(outdir_block_cds, "exon_table.tsv")
+fn_exon_failed <- file.path(outdir_block_cds, "exon_failed.txt")
+
+data.table::fwrite(df_exons, file=fn_exon_table, sep="\t", quote=F)
+readr::write_lines(ls_failed, file=fn_exon_failed)
+
+log4r::info(fn_logger, paste0("Exon tables: ", length(unique(df_exons$locus)), " loci ",
+                              "(", sum(df_exons$strand[!duplicated(df_exons$locus)] == "-"), " minus strand); ",
+                              "failed: ", length(ls_failed)))
 ```
