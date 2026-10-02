@@ -167,3 +167,31 @@ f_extract_cds <- function(fn_hap, exons) {
     cds <- Biostrings::BStringSet(setNames(paste(substring(seq, exons$start, exons$end), collapse=""), names(hap)[1]))
     return(cds)
 }
+
+# run MAFFT --add
+f_mafft_add <- function(fn_ref, fn_sample, fn_out, exe_mafft) {
+  cmd_mafft <- paste(exe_mafft, "--auto --add", fn_sample, "--keeplength --adjustdirection", fn_ref, ">", fn_out)
+  system(cmd_mafft)
+}
+
+# run EPA-NG
+f_epa_ng <- function(fn_ref, fn_query, fn_tree, model, outdir, threads, fn_log, exe_epa_ng) {
+  cmd_epa_ng <- paste(exe_epa_ng,
+                      "--ref-msa", fn_ref,
+                      "--tree", fn_tree,
+                      "--model", model,
+                      "--query", fn_query,
+                      "-T", threads, "-w", outdir, "--redo", ">>", fn_log)
+  system(cmd_epa_ng)
+}
+
+# run gappa examine assign
+f_gappa_assign <- function(fn_jplace, fn_taxon, outdir, log_file, exe_gappa) {
+    cmd_gappa <- paste(exe_gappa, "examine assign",
+                       "--jplace-path", fn_jplace,
+                       "--taxon-file", fn_taxon,
+                       "--per-query-results --best-hit --allow-file-overwriting",
+                       "--out-dir", outdir,
+                       ">>", log_file)
+    system(cmd_gappa)
+}

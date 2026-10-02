@@ -20,17 +20,22 @@ params:
   # --- Executables ---------------------------------------------
   exe_bcftools: "bcftools"
   exe_bwa: "bwa"
+  exe_epa_ng: "epa-ng"
+  exe_gappa: "gappa"
+  exe_mafft: "mafft"
   exe_samtools: "samtools"
   exe_whatshap: "whatshap"
 
   # --- Input Files ---------------------------------------------
   dir_backbone_alignment: ""
   dir_backbone_genetrees: ""
+  file_backbone_genetree_models: ""
+  file_taxonomy_metadata: ""
 
   sample: ""
   dir_fastq_gz: ""
-  fn_query_matches_flanked: ""
-  fn_query_matches_cds: ""
+  file_query_matches_flanked: ""
+  file_query_matches_cds: ""
 
 ---
 
