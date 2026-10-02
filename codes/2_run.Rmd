@@ -252,7 +252,7 @@ n_decision <- table(ls_results$blocks$decision)
 readr::write_lines(c("", paste0("Parental lineages: A = ", ls_results$lineage_A, ", B = ", ls_results$lineage_B),
                          paste0("Number of confidently-placed blocks: ", ls_results$pairs$n_blocks[1], " of ", sum(ls_results$pairs$n_blocks)),
                          paste0("Decisions: ", paste(names(n_decision), n_decision, sep="=", collapse=", "))),
-                   con=fn_log, append=T)
+                   file=fn_log, append=T)
 
 if (ls_results$lineage_A == ls_results$lineage_B) {
     log4r::warn(fn_logger, "Most common pair is a single lineage. Please rerun with a finer taxonomy_rank")
