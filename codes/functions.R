@@ -279,7 +279,7 @@ f_assign_blocks <- function(df_assign, min_alwr) {
     colnames(df_pairs) <- c("pair", "n_blocks")
 
     # extract the two parental lineages from the most common pair
-    most_common_pair <- unlist(strsplit(df_pairs$pair[1], split=" | "))
+    most_common_pair <- unlist(strsplit(df_pairs$pair[1], split=" | ", fixed=TRUE))
     lineage_A <- most_common_pair[1]
     lineage_B <- most_common_pair[2]
 
