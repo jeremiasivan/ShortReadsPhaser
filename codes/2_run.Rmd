@@ -13,7 +13,7 @@ outdir_variant_calls     <- file.path(currentdir, "03_variant_calling")
 outdir_haplotypes        <- file.path(currentdir, "04_haplotypes")
 outdir_blocks_cds        <- file.path(currentdir, "05_blocks_cds")
 
-outdir_assignment        <- file.path(currentdir, "06_assigment")
+outdir_assignment        <- file.path(currentdir, "06_assignment")
 outdir_mafftadd          <- file.path(outdir_assignment, "01_mafftadd")
 outdir_epa_ng            <- file.path(outdir_assignment, "02_epa_ng")
 sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_variant_calls, outdir_haplotypes, outdir_blocks_cds, outdir_mafftadd, outdir_epa_ng), function(x) {
@@ -165,12 +165,12 @@ for (locus in ls_locus) {
 
     # combine all CDS
     block_cds <- do.call(c, lapply(fn_haps, f_extract_cds, exons=exons))
-    Biostrings::writeXStringSet(block_cds, filepath=file.path(outdir_block_cds, paste0(locus, ".fna")))
+    Biostrings::writeXStringSet(block_cds, filepath=file.path(outdir_blocks_cds, paste0(locus, ".fna")))
 }
 
 # save the exon table and the list of failed loci
-fn_exon_table  <- file.path(outdir_block_cds, "exon_table.tsv")
-fn_exon_failed <- file.path(outdir_block_cds, "exon_failed.txt")
+fn_exon_table  <- file.path(outdir_blocks_cds, "exon_table.tsv")
+fn_exon_failed <- file.path(outdir_blocks_cds, "exon_failed.txt")
 
 data.table::fwrite(df_exons, file=fn_exon_table, sep="\t", quote=F)
 readr::write_lines(ls_failed, file=fn_exon_failed)
@@ -191,7 +191,7 @@ registerDoSNOW(nwcl)
 # iterate over loci
 foreach (locus = ls_locus) %dopar% {
     # input files
-    fn_query <- file.path(outdir_block_cds, paste0(locus, ".fna"))
+    fn_query <- file.path(outdir_blocks_cds, paste0(locus, ".fna"))
     fn_ref   <- file.path(params$dir_backbone_alignment, paste0(locus, ".fna"))
     if (!all(file.exists(fn_query, fn_ref))) {
         return(NULL)
@@ -220,10 +220,12 @@ foreach (locus = ls_locus) %dopar% {
 
     # place the query on each gene tree
     fn_ref_tree <- file.path(params$dir_backbone_genetrees, paste0(locus, ".treefile"))
+    substitution_model <- f_iqtree2epa_ng_model(df_genetree_model$model[df_genetree_model$locus==locus])
+
     f_epa_ng(fn_ref     = file.path(dir_output, "reference.fasta"),
              fn_query   = file.path(dir_output, "query.fasta"),
              fn_tree    = fn_ref_tree,
-             model      = df_genetree_model$model[df_genetree_model==locus],
+             model      = substitution_model,
              outdir     = dir_output,
              fn_log     = fn_epa_ng_log,
              exe_epa_ng = params$exe_epa_ng)
@@ -234,5 +236,28 @@ foreach (locus = ls_locus) %dopar% {
                    outdir    = file.path(dir_output, "assign"),
                    log_file  = fn_epa_ng_log,
                    exe_gappa = params$exe_gappa)
+}
+
+stopCluster(nwcl)
+```
+
+```{r block-assignment}
+# read gappa assignments and decide the identity of each block
+df_assign  <- f_read_gappa_assignments(outdir_epa_ng, params$taxonomy_rank)
+ls_results <- f_assign_blocks(df_assign, params$min_alwr)
+
+# save output data.frames
+data.table::fwrite(ls_results$blocks, file=file.path(outdir_assignment, "block_assignments.tsv"), sep="\t", quote=F)
+data.table::fwrite(ls_results$pairs, file=file.path(outdir_assignment, "lineage_pairs.tsv"), sep="\t", quote=F)
+
+# update log files
+n_decision <- table(ls_results$blocks$decision)
+writeLines(c("", paste0("Parental lineages: A = ", ls_results$lineage_A, ", B = ", ls_results$lineage_B),
+                 paste0("Number of confidently-placed blocks: ", ls_results$pairs$n_blocks[1], " of ", sum(ls_results$pairs$n_blocks)),
+                 paste0("Decisions: ", paste(names(n_decision), n_decision, sep="=", collapse=", ")))
+           con=fn_logger, append=T)
+
+if (ls_results$lineage_A == ls_results$lineage_B) {
+    log4r::warn(fn_logger, "Most common pair is a single lineage. Please rerun with a finer taxonomy_rank")
 }
 ```

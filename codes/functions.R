@@ -122,10 +122,10 @@ f_locate_exons <- function(fn_cds, fn_flanked) {
         # check the strand and reverse complement if necessary
         query <- ifelse (strand == "+",
                          ref,
-                         as.character(Biostrings::reverseComplement(Biostrings::BStringSet(ref))))
+                         as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(ref))))
 
         # align the CDS to the flanked reference
-        aln <- Biostrings::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(query))
+        aln <- Biostrings::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(query), type="global-local")
 
         # extract the aligned positions and calculate identity
         p <- unlist(strsplit(as.character(Biostrings::pattern(aln)), ""))     # aligned CDS
@@ -160,7 +160,7 @@ f_extract_cds <- function(fn_hap, exons) {
     hap <- Biostrings::readBStringSet(fn_hap)
     seq <- toupper(as.character(hap[[1]]))
     if (exons$strand[1] == "-") {
-        seq <- as.character(Biostrings::reverseComplement(Biostrings::BStringSet(seq)))
+        seq <- as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(seq)))
     }
 
     # extract the coding sequence
@@ -172,6 +172,24 @@ f_extract_cds <- function(fn_hap, exons) {
 f_mafft_add <- function(fn_ref, fn_sample, fn_out, exe_mafft) {
   cmd_mafft <- paste(exe_mafft, "--auto --add", fn_sample, "--keeplength --adjustdirection", fn_ref, ">", fn_out)
   system(cmd_mafft)
+}
+
+# substitute IQ-TREE2 models to EPA-NG models (source: Claude)
+f_iqtree2epa_ng_model <- function(model) {
+    map <- c(TN="TN93", TNe="TN93ef", K81u="K81uf", TPM2u="TPM2uf", TPM3u="TPM3uf",
+             TIM="TIM1uf", TIMe="TIM1", TIM2="TIM2uf", TIM2e="TIM2", TIM3="TIM3uf", TIM3e="TIM3", TVMe="TVMef")
+
+    # extract substitution model and modifiers
+    matrix <- sub("\\+.*", "", model)
+    modifiers <- sub("^[^+]*", "", model)
+
+    # update the substitution model if it is in the map
+    if (matrix %in% names(map)) {
+        matrix <- map[[matrix]]
+    }
+
+    model <- paste0(matrix, modifiers)
+    return(model)
 }
 
 # run EPA-NG
@@ -194,4 +212,97 @@ f_gappa_assign <- function(fn_jplace, fn_taxon, outdir, log_file, exe_gappa) {
                        "--out-dir", outdir,
                        ">>", log_file)
     system(cmd_gappa)
+}
+
+# function: read gappa assignments
+f_read_gappa_assignments <- function(dir_epa_ng, rank) {
+    # list output files from gappa examine assign
+    fn_per_query <- list.files(dir_epa_ng, pattern="^per_query\\.tsv$", recursive=TRUE, full.names=TRUE)
+
+    # combine all assignments into a data.frame
+    ls_assign <- lapply(fn_per_query, function(file) {
+        df <- data.table::fread(file)
+        df$locus <- basename(dirname(dirname(file)))
+        df
+    })
+    df_assign <- data.table::rbindlist(ls_assign)
+
+    # extract information from the sequence name
+    df_assign$PS      <- gsub(".*_PS([^_]+)_h[12]$", "\\1", df_assign$name)
+    df_assign$hap     <- gsub(".*_(h[12])$", "\\1", df_assign$name)
+    df_assign$lineage <- sapply(strsplit(df_assign$taxopath, split=";"), function(x) { x[min(rank, length(x))] })
+    df_assign$aLWR    <- as.numeric(df_assign$aLWR)
+
+    # subset the columns of interest
+    df_assign <- df_assign %>% select(c("locus", "PS", "hap", "lineage", "aLWR"))
+
+    return(df_assign)
+}
+
+# function: find the two parental lineages for every block (source: Claude)
+f_assign_blocks <- function(df_assign, min_alwr) {
+    # extract unique blocks
+    df_blocks <- df_assign %>%
+                    select("locus", "PS") %>%
+                    unique() %>%
+                    mutate(h1_lineage="none", h2_lineage="none", h1_aLWR=0, h2_aLWR=0)
+
+    # iterate over each block
+    for (i in 1:nrow(df_blocks)) {
+        # extract the rows corresponding to the current block
+        r1 <- df_assign[df_assign$locus==df_blocks$locus[i] & df_assign$PS==df_blocks$PS[i] & df_assign$hap == "h1", ]
+        r2 <- df_assign[df_assign$locus==df_blocks$locus[i] & df_assign$PS==df_blocks$PS[i] & df_assign$hap == "h2", ]
+
+        # assign the lineages and aLWR values to the block
+        if (nrow(r1) > 0) {
+            df_blocks$h1_lineage[i] <- r1$lineage[1]
+            df_blocks$h1_aLWR[i]    <- r1$aLWR[1]
+        }
+
+        if (nrow(r2) > 0) {
+            df_blocks$h2_lineage[i] <- r2$lineage[1]
+            df_blocks$h2_aLWR[i]    <- r2$aLWR[1]
+        }
+    }
+
+    # check which blocks have confident assignments
+    is_conf1 <- df_blocks$h1_aLWR >= min_alwr
+    is_conf2 <- df_blocks$h2_aLWR >= min_alwr
+    is_both  <- is_conf1 & is_conf2
+
+    # pair the lineages of the two haplotypes for each block
+    pair <- paste(pmin(df_blocks$h1_lineage, df_blocks$h2_lineage),
+                  pmax(df_blocks$h1_lineage, df_blocks$h2_lineage), sep=" | ")
+
+    # calculate the number of blocks for each pair of lineages
+    df_pairs <- data.table::data.table(sort(table(pair[is_both]), decreasing=TRUE))
+    colnames(df_pairs) <- c("pair", "n_blocks")
+
+    # extract the two parental lineages from the most common pair
+    most_common_pair <- unlist(strsplit(df_pairs$pair[1], split=" | "))
+    lineage_A <- most_common_pair[1]
+    lineage_B <- most_common_pair[2]
+
+    # assign decisions per block
+    df_blocks$decision <- "ambiguous"
+    for (i in 1:nrow(df_blocks)) {
+        # extract the lineages of the two haplotypes
+        l1 <- df_blocks$h1_lineage[i]
+        l2 <- df_blocks$h2_lineage[i]
+
+        # assign decisions based on the lineages and confidence
+        if (is_both[i] && l1 == lineage_A && l2 == lineage_B) {
+            df_blocks$decision[i] <- "keep"
+        } else if (is_both[i] && l1 == lineage_B && l2 == lineage_A) {
+            df_blocks$decision[i] <- "flip"
+        } else if (is_both[i] && l1 == l2) {
+            df_blocks$decision[i] <- "same"
+        } else if (is_conf1[i] && l1 %in% c(lineage_A, lineage_B) && !(l2 %in% c(lineage_A, lineage_B))) {
+            df_blocks$decision[i] <- ifelse(l1 == lineage_A, "keep", "flip")      
+        } else if (is_conf2[i] && l2 %in% c(lineage_A, lineage_B) && !(l1 %in% c(lineage_A, lineage_B))) {
+            df_blocks$decision[i] <- ifelse(l2 == lineage_A, "flip", "keep")      
+        }
+    }
+
+    return(list(blocks=df_blocks, pairs=df_pairs, lineage_A=lineage_A, lineage_B=lineage_B))
 }
