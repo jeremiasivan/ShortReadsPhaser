@@ -2,7 +2,7 @@
 title: "Run ShortReadsPhaser"
 ---
 
-```{r setup, include=FALSE}
+```{r, include=FALSE}
 # create output directories
 outdir_best_hits         <- file.path(currentdir, "01_best_hits")
 outdir_best_hits_cds     <- file.path(outdir_best_hits, "cds")
@@ -20,7 +20,7 @@ sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_
   if (!dir.exists(x)) { dir.create(x, recursive=T) }})
 ```
 
-```{r}
+```{r split-loci}
 # extract CAPTUS best hits
 fn_target_loci_flanked <- file.path(outdir_best_hits, "target_loci_flanked.fna")
 fn_target_loci_cds     <- file.path(outdir_best_hits, "target_loci_cds.fna")
@@ -129,55 +129,52 @@ for (i in seq_len(nrow(df_blocks_whatshap))) {
 ```
 
 ```{r block-cds}
-# output variables
-df_exons  <- data.table::data.table()
-ls_failed <- c()
-
 # extract list of loci
 ls_locus <- list.files(outdir_best_hits_flanked, pattern="\\.fna$", recursive=F, full.names=F)
 ls_locus <- gsub("\\.fna$", "", ls_locus)
 
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+registerDoSNOW(nwcl)
+
 # iterate over loci
-for (locus in ls_locus) {
+df_exons <- foreach (locus=ls_locus, .combine='rbind') %dopar% {
     # input files
     fn_cds     <- file.path(outdir_best_hits_cds, paste0(locus, ".fna"))
     fn_flanked <- file.path(outdir_best_hits_flanked, paste0(locus, ".fna"))
     if (!file.exists(fn_cds)) {
-        ls_failed <- c(ls_failed, paste0(locus, ": no CDS best hit"))
-        next
+        log4r::warn(fn_logger, paste0(locus, ": no CDS best hit"))
+        return(NULL)
     }
 
     # extract exon coordinates
     exons <- f_locate_exons(fn_cds, fn_flanked)
     if (is.null(exons)) {
-        ls_failed <- c(ls_failed, paste0(locus, ": CDS could not be aligned to the flanked sequence"))
-        next
+        log4r::warn(fn_logger, paste0(locus, ": CDS could not be aligned to the flanked sequence"))
+        return(NULL)
     }
 
-    # update the output data.frame
-    df_exons <- rbind(df_exons, data.table::data.table(locus=locus, exon=seq_len(nrow(exons)), exons))
-
-    # cextract the CDS out of every block haplotype of this locus
+    # extract the CDS out of every block haplotype of this locus
     fn_haps <- list.files(outdir_haplotypes, pattern=paste0("^", locus, "\\.PS.*_h[12]\\.fna$"), full.names=TRUE)
     if (length(fn_haps) == 0) {
-        next
+        return(NULL)
     }
 
     # combine all CDS
     block_cds <- do.call(c, lapply(fn_haps, f_extract_cds, exons=exons))
     Biostrings::writeXStringSet(block_cds, filepath=file.path(outdir_blocks_cds, paste0(locus, ".fna")))
+
+    return(data.table::data.table(locus=locus, exon=seq_len(nrow(exons)), exons))
 }
 
-# save the exon table and the list of failed loci
-fn_exon_table  <- file.path(outdir_blocks_cds, "exon_table.tsv")
-fn_exon_failed <- file.path(outdir_blocks_cds, "exon_failed.txt")
+stopCluster(nwcl)
 
+# save the exon table and the list of failed loci
+fn_exon_table <- file.path(outdir_blocks_cds, "exon_table.tsv")
 data.table::fwrite(df_exons, file=fn_exon_table, sep="\t", quote=F)
-readr::write_lines(ls_failed, file=fn_exon_failed)
 
 log4r::info(fn_logger, paste0("Exon tables: ", length(unique(df_exons$locus)), " loci ",
-                              "(", sum(df_exons$strand[!duplicated(df_exons$locus)] == "-"), " minus strand); ",
-                              "failed: ", length(ls_failed)))
+                              "(", sum(df_exons$strand[!duplicated(df_exons$locus)] == "-"), " minus strand)"))
 ```
 
 ```{r add-query}
@@ -254,7 +251,7 @@ data.table::fwrite(ls_results$pairs, file=file.path(outdir_assignment, "lineage_
 n_decision <- table(ls_results$blocks$decision)
 readr::write_lines(c("", paste0("Parental lineages: A = ", ls_results$lineage_A, ", B = ", ls_results$lineage_B),
                          paste0("Number of confidently-placed blocks: ", ls_results$pairs$n_blocks[1], " of ", sum(ls_results$pairs$n_blocks)),
-                         paste0("Decisions: ", paste(names(n_decision), n_decision, sep="=", collapse=", ")))
+                         paste0("Decisions: ", paste(names(n_decision), n_decision, sep="=", collapse=", "))),
                    con=fn_log, append=T)
 
 if (ls_results$lineage_A == ls_results$lineage_B) {

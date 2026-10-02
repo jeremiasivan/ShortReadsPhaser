@@ -125,14 +125,14 @@ f_locate_exons <- function(fn_cds, fn_flanked) {
                          as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(ref))))
 
         # align the CDS to the flanked reference
-        aln <- Biostrings::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(query), type="global-local")
+        aln <- pwalign::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(query), type="global-local")
 
         # extract the aligned positions and calculate identity
-        p <- unlist(strsplit(as.character(Biostrings::pattern(aln)), ""))     # aligned CDS
-        q <- unlist(strsplit(as.character(Biostrings::subject(aln)), ""))     # aligned flanked
+        p <- unlist(strsplit(as.character(pwalign::pattern(aln)), ""))     # aligned CDS
+        q <- unlist(strsplit(as.character(pwalign::subject(aln)), ""))     # aligned flanked
 
         # extract the starting position of the aligned sites
-        ref_pos   <- cumsum(q != "-") + Biostrings::start(Biostrings::subject(aln)) - 1
+        ref_pos   <- cumsum(q != "-") + pwalign::start(pwalign::subject(aln)) - 1
         mapped    <- p != "-" & q != "-"
         positions <- ref_pos[mapped]
         identity  <- mean(p[mapped] == q[mapped])
@@ -176,8 +176,13 @@ f_mafft_add <- function(fn_ref, fn_sample, fn_out, exe_mafft) {
 
 # substitute IQ-TREE2 models to EPA-NG models (source: Claude)
 f_iqtree2epa_ng_model <- function(model) {
-    map <- c(TN="TN93", TNe="TN93ef", K81u="K81uf", TPM2u="TPM2uf", TPM3u="TPM3uf",
-             TIM="TIM1uf", TIMe="TIM1", TIM2="TIM2uf", TIM2e="TIM2", TIM3="TIM3uf", TIM3e="TIM3", TVMe="TVMef")
+    map <- c(JC69="JC", K2P="K80", HKY85="HKY",
+             TN="TN93", TrN="TN93", TNe="TN93ef",
+             K3P="K81", TPM1="K81",
+             K81u="K81uf", K3Pu="K81uf", TPM1u="K81uf",
+             TPM2u="TPM2uf", TPM3u="TPM3uf",
+             TIM="TIM1uf", TIMe="TIM1", TIM2="TIM2uf", TIM2e="TIM2", TIM3="TIM3uf", TIM3e="TIM3",
+             TVMe="TVMef")
 
     # extract substitution model and modifiers
     matrix <- sub("\\+.*", "", model)
@@ -193,13 +198,13 @@ f_iqtree2epa_ng_model <- function(model) {
 }
 
 # run EPA-NG
-f_epa_ng <- function(fn_ref, fn_query, fn_tree, model, outdir, threads, fn_log, exe_epa_ng) {
+f_epa_ng <- function(fn_ref, fn_query, fn_tree, model, outdir, fn_log, exe_epa_ng) {
   cmd_epa_ng <- paste(exe_epa_ng,
                       "--ref-msa", fn_ref,
                       "--tree", fn_tree,
                       "--model", model,
                       "--query", fn_query,
-                      "-T", threads, "-w", outdir, "--redo", ">>", fn_log)
+                      "-w", outdir, "--redo", ">>", fn_log)
   system(cmd_epa_ng)
 }
 
