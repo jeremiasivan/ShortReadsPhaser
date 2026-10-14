@@ -194,6 +194,14 @@ foreach (locus = ls_locus) %dopar% {
         return(NULL)
     }
 
+    # check if query sequence is all Ns
+    seq   <- Biostrings::readBStringSet(fn_query)
+    n_N   <- Biostrings::letterFrequency(seq, letters = "Nn")[, 1]
+    all_N <- n_N == width(seq) & width(seq) > 0
+    if (any(all_N)) {
+        return(NULL)
+    }
+
     # MAFFT --add
     fn_output_alignment <- file.path(outdir_mafftadd, paste0(locus, ".fna"))
     f_mafft_add(fn_ref    = fn_ref,
