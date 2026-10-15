@@ -221,14 +221,14 @@ f_gappa_assign <- function(fn_jplace, fn_taxon, outdir, log_file, exe_gappa) {
     cmd_gappa <- paste(exe_gappa, "examine assign",
                        "--jplace-path", fn_jplace,
                        "--taxon-file", fn_taxon,
-                       "--per-query-results --best-hit --allow-file-overwriting",
+                       "--per-query-results --allow-file-overwriting",
                        "--out-dir", outdir,
                        ">>", log_file)
     system(cmd_gappa)
 }
 
 # function: read gappa assignments
-f_read_gappa_assignments <- function(dir_epa_ng, rank) {
+f_read_gappa_assignments <- function(dir_epa_ng, tax_rank) {
     # list output files from gappa examine assign
     fn_per_query <- list.files(dir_epa_ng, pattern="^per_query\\.tsv$", recursive=TRUE, full.names=TRUE)
 
@@ -238,8 +238,20 @@ f_read_gappa_assignments <- function(dir_epa_ng, rank) {
             return(NULL)
         }
 
+        # open the file
         df <- data.table::fread(file)
         df$locus <- basename(dirname(dirname(file)))
+        df$aLWR  <- as.numeric(df$aLWR)
+        df$depth <- lengths(strsplit(df$taxopath, ";"))
+
+        # extract the rank of interest and remove duplicates
+        df <- df %>%
+                filter(depth == tax_rank) %>%
+                group_by(name) %>%
+                slice_max(aLWR, n=1, with_ties=FALSE) %>%
+                ungroup()
+
+        df$lineage <- sapply(strsplit(df$taxopath, ";"), function(path) { path[tax_rank] })
         df
     })
     df_assign <- data.table::rbindlist(ls_assign)
@@ -247,8 +259,6 @@ f_read_gappa_assignments <- function(dir_epa_ng, rank) {
     # extract information from the sequence name
     df_assign$PS      <- gsub(".*_PS([^_]+)_h[12]$", "\\1", df_assign$name)
     df_assign$hap     <- gsub(".*_(h[12])$", "\\1", df_assign$name)
-    df_assign$lineage <- sapply(strsplit(df_assign$taxopath, split=";"), function(x) { x[min(rank, length(x))] })
-    df_assign$aLWR    <- as.numeric(df_assign$aLWR)
 
     # subset the columns of interest
     df_assign <- df_assign %>% select(c("locus", "PS", "hap", "lineage", "aLWR"))

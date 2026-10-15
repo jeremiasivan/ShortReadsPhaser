@@ -77,7 +77,7 @@ if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz)) || params$redo) {
 fn_phased_vcf      <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf"))
 fn_phased_vcf_gz   <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf.gz"))
 fn_blocks_whatshap <- file.path(outdir_variant_calls, "blocks_whatshap.tsv")
-if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz)) || params$redo) {
+if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz, fn_blocks_whatshap)) || params$redo) {
     f_whatshap(fn_target_loci     = fn_target_loci_flanked,
                fn_vcf_gz_filtered = fn_filtered_vcf_gz,
                fn_bam             = fn_bam_dedup,
