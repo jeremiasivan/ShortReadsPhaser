@@ -267,7 +267,7 @@ f_read_gappa_assignments <- function(dir_epa_ng, tax_rank) {
 }
 
 # function: find the two parental lineages for every block (source: Claude)
-f_assign_blocks <- function(df_assign, min_alwr, lineage_A=NULL, lineage_B=NULL) {
+f_assign_blocks <- function(df_assign, min_alwr, input_lineage_A=NULL, input_lineage_B=NULL) {
     # extract unique blocks
     df_blocks <- df_assign %>%
                     select("locus", "PS") %>%
@@ -307,8 +307,8 @@ f_assign_blocks <- function(df_assign, min_alwr, lineage_A=NULL, lineage_B=NULL)
 
     # extract the two parental lineages from the most common pair
     most_common_pair <- unlist(strsplit(df_pairs$pair[1], split=" | ", fixed=TRUE))
-    lineage_A <- most_common_pair[1]
-    lineage_B <- most_common_pair[2]
+    lineage_A <- ifelse(is.null(input_lineage_A), most_common_pair[1], input_lineage_A)
+    lineage_B <- ifelse(is.null(input_lineage_B), most_common_pair[2], input_lineage_B)
 
     # assign decisions per block
     df_blocks$decision <- "ambiguous"

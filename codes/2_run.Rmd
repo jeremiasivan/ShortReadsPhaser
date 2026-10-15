@@ -65,8 +65,8 @@ if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz)) || params$redo) {
                       fn_bam             = fn_bam_dedup,
                       fn_vcf_gz          = fn_vcf_gz,
                       fn_vcf_gz_filtered = fn_filtered_vcf_gz,
-                      min_depth          = 12,
-                      max_depth          = 150,
+                      min_depth          = params$min_depth,
+                      max_depth          = params$max_depth,
                       thread             = params$thread,
                       exe_bcftools       = params$exe_bcftools)
 }
@@ -158,7 +158,7 @@ df_exons <- foreach (locus=ls_locus, .combine='rbind') %dopar% {
     }
 
     # extract exon coordinates
-    exons <- f_locate_exons(fn_cds, fn_flanked, min_coverage=0.9, min_identity=0.95)
+    exons <- f_locate_exons(fn_cds, fn_flanked, params$min_coverage, params$min_identity)
     if (is.null(exons)) {
         log4r::warn(fn_logger, paste0(locus, ": CDS could not be aligned to the flanked sequence"))
         return(NULL)
