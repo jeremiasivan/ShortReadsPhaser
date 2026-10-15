@@ -17,48 +17,32 @@ ls_sets <- list(both   = ls_results$blocks[ls_results$blocks$tier == "both", ],
 ls_sets <- lapply(ls_sets, function(x) { x[x$decision %in% c("keep", "flip"), ] })
 sapply(names(ls_sets), function(x) { dir.create(file.path(outdir_phased, x), recursive=T, showWarnings=F) })
 
-# read the exon table
-df_exons <- data.table::fread(fn_exon_table)
-
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 registerDoSNOW(nwcl)
 
 # iterate over loci
-df_summary <- foreach(locus = unique(df_exons$locus), .combine='rbind') %dopar% {
-    # input files
-    fn_ref       <- file.path(outdir_best_hits_flanked, paste0(locus, ".fna"))
-    fn_block_cds <- file.path(outdir_blocks_cds, paste0(locus, ".fna"))
-    exons        <- df_exons[df_exons$locus == locus, ]
+ls_locus   <- gsub("\\.fna$", "", list.files(outdir_blocks_cds, pattern="^[^.]+\\.fna$"))
+df_summary <- foreach(locus = ls_locus, .combine='rbind') %dopar% {
+    # open the block sequence
+    block_cds <- Biostrings::readBStringSet(file.path(outdir_blocks_cds, paste0(locus, ".fna")))
 
-    # unphased consensus of the whole locus, then extract its CDS
-    fn_consensus <- file.path(outdir_phased, paste0(locus, ".consensus.fna"))
-    f_generate_consensus(fn_target_loci = fn_ref,
-                         fn_snps_vcf    = fn_snps_vcf_gz,
-                         fn_out         = fn_consensus,
-                         exe_bcftools   = params$exe_bcftools)
-    consensus <- f_extract_cds(fn_consensus, exons)[[1]]
-
-    # extract the CDS blocks
-    block_cds <- Biostrings::BStringSet()
-    if (file.exists(fn_block_cds)) {
-        block_cds <- Biostrings::readBStringSet(fn_block_cds)
-    }
-
-    # assemble and save the two parental haplotypes for each set
+    # iterate over individual sets
     ls_out <- lapply(names(ls_sets), function(set) {
-        # extract locus blocks in the corresponding set
-        blocks      <- ls_sets[[set]][ls_sets[[set]]$locus == locus, ]
+        blocks <- ls_sets[[set]][ls_sets[[set]]$locus == locus, ]
+        if (nrow(blocks) == 0) {
+            return(NULL)
+        }
 
-        # extract the two haplotypes
-        haps        <- f_build_phased_locus(consensus, block_cds, blocks)
+        # extract the haplotype blocks
+        haps        <- f_build_phased_locus(block_cds, blocks)
         names(haps) <- paste0(params$sample, "_", names(haps))
         Biostrings::writeXStringSet(haps, filepath=file.path(outdir_phased, set, paste0(locus, ".fna")))
 
         data.table::data.table(set        = set,
                                locus      = locus,
                                n_oriented = nrow(blocks),
-                               n_iupac    = sum(!strsplit(as.character(haps[[1]]), "")[[1]] %in% c("A", "C", "G", "T", "N")))
+                               n_sites    = sum(strsplit(as.character(haps[[1]]), "")[[1]] != "N"))
     })
     
     return(data.table::rbindlist(ls_out))

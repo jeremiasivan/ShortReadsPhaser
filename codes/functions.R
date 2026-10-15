@@ -338,14 +338,9 @@ f_assign_blocks <- function(df_assign, min_alwr, lineage_A=NULL, lineage_B=NULL)
     return(list(blocks=df_blocks, pairs=df_pairs, lineage_A=lineage_A, lineage_B=lineage_B))
 }
 
-# function: generate the unphased consensus of a locus (IUPAC codes at all heterozygous sites)
-f_generate_consensus <- function(fn_target_loci, fn_snps_vcf, fn_out, exe_bcftools) {
-    system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H I", fn_snps_vcf, ">", fn_out))
-}
-
 # function: build phased locus from the consensus and the block haplotypes (source: Claude)
-f_build_phased_locus <- function(consensus, block_cds, df_blocks) {
-    h0 <- strsplit(toupper(as.character(consensus)), "")[[1]]
+f_build_phased_locus <- function(block_cds, df_blocks) {
+    h0 <- rep("N", Biostrings::width(block_cds)[1])
     h1 <- h0
 
     # iterate over blocks
