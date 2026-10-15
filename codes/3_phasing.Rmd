@@ -74,6 +74,13 @@ registerDoSNOW(nwcl)
 for (set in names(ls_sets)) {
     # extract the list of locus
     ls_locus <- list.files(file.path(outdir_phased, set), recursive=F, full.names=F)
+    ls_locus <- gsub("\\.fna", "", ls_locus)
+
+    # create output directory
+    dir_aln_set <- file.path(outdir_alignment, set)
+    if (!dir.exists(dir_aln_set)) {
+        dir.create(dir_aln_set, recursive=T)
+    }
 
     # iterate over loci
     foreach (locus = ls_locus) %dopar% {
@@ -82,26 +89,32 @@ for (set in names(ls_sets)) {
         fn_query <- file.path(outdir_phased, set, paste0(locus, ".fna"))
 
         # MAFFT --add
-        fn_output_alignment <- file.path(outdir_alignment, paste0(locus, ".fna"))
+        fn_output_alignment <- file.path(dir_aln_set, paste0(locus, ".fna"))
         f_mafft_add(fn_ref    = fn_ref,
                     fn_sample = fn_query,
                     fn_out    = fn_output_alignment,
                     exe_mafft = params$exe_mafft)
     }
 
+    # create output directory
+    dir_tree_set <- file.path(outdir_tree, set)
+    if (!dir.exists(dir_tree_set)) {
+        dir.create(dir_tree_set, recursive=T)
+    }
+
     # concatenate alignment
-    f_amas_dna(input_regex    = file.path(outdir_phased, set, "*.fna"),
-               fn_output_aln  = file.path(outdir_tree, "concatenated.out"),
-               fn_output_part = file.path(outdir_tree, "partitions.nex"),
+    f_amas_dna(input_regex    = file.path(dir_aln_set, "*.fna"),
+               fn_output_aln  = file.path(dir_tree_set, "concatenated.out"),
+               fn_output_part = file.path(dir_tree_set, "partitions.nex"),
                exe_amas       = params$exe_amas)
 
     # convert Ns to gaps
-    f_unknown2gap(fn_fasta  = file.path(outdir_tree, "concatenated.out"),
-                  fn_output = file.path(outdir_tree, "concatenated.fna"))
+    f_unknown2gap(fn_fasta  = file.path(dir_tree_set, "concatenated.out"),
+                  fn_output = file.path(dir_tree_set, "concatenated.fna"))
 
     # extract best model per locus
-    fn_partition <- file.path(outdir_tree, "partitions_with_models.nex")
-    df_partition <- f_extract_best_models(params$file_backbone_genetree_models, file.path(outdir_tree, "partitions.nex"))
+    fn_partition <- file.path(dir_tree_set, "partitions_with_models.nex")
+    df_partition <- f_extract_best_models(params$file_backbone_genetree_models, file.path(dir_tree_set, "partitions.nex"))
 
     # write the partitions and models
     con <- file(fn_partition, "w")
@@ -124,10 +137,10 @@ for (set in names(ls_sets)) {
     close(con)
 
     # infer IQ-TREE tree
-    f_iqtree2_fixtop(fn_input     = file.path(outdir_tree, "concatenated.fna"),
+    f_iqtree2_fixtop(fn_input     = file.path(dir_tree_set, "concatenated.fna"),
                      fn_tree      = params$file_backbone_speciestree,
                      fn_partition = fn_partition,
-                     prefix       = file.path(outdir_tree, "iqtree"),
+                     prefix       = file.path(dir_tree_set, "iqtree"),
                      thread       = params$thread,
                      is_redo      = params$redo,
                      exe_iqtree2  = params$exe_iqtree)
