@@ -90,7 +90,7 @@ for (set in names(ls_sets)) {
     }
 
     # concatenate alignment
-    f_amas_dna(input_regex    = paste0(file.path(outdir_phased, set), "*.fna),
+    f_amas_dna(input_regex    = file.path(outdir_phased, set, "*.fna"),
                fn_output_aln  = file.path(outdir_tree, "concatenated.out"),
                fn_output_part = file.path(outdir_tree, "partitions.nex"),
                exe_amas       = params$exe_amas)
@@ -132,4 +132,6 @@ for (set in names(ls_sets)) {
                      is_redo      = params$redo,
                      exe_iqtree2  = params$exe_iqtree)
 }
+
+stopCluster(nwcl)
 ```
