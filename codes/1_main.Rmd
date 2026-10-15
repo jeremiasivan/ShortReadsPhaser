@@ -18,11 +18,13 @@ params:
   redo: FALSE
   
   # --- Executables ---------------------------------------------
+  exe_amas: "AMAS.py"
   exe_bcftools: "bcftools"
   exe_bwa: "bwa"
   exe_epa_ng: "epa-ng"
   exe_gappa: "gappa"
   exe_mafft: "mafft"
+  exe_iqtree: "iqtree2"
   exe_samtools: "samtools"
   exe_whatshap: "whatshap"
 
@@ -32,6 +34,7 @@ params:
   dir_backbone_genetrees: ""
   file_backbone_genetree_models: ""
   file_taxonomy_metadata: ""
+  file_backbone_speciestree: ""
 
   # new sample (i.e., query)
   sample: ""

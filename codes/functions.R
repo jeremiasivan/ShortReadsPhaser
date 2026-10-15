@@ -364,3 +364,78 @@ f_build_phased_locus <- function(block_cds, df_blocks) {
 
     return(Biostrings::BStringSet(c(h0=paste(h0, collapse=""), h1=paste(h1, collapse=""))))
 }
+
+# function: run AMAS
+f_amas_dna <- function(input_regex, fn_output_aln, fn_output_part, exe_amas) {
+    cmd_amas <- paste(exe_amas, "concat -f fasta -d dna",
+                      "-i", input_regex,
+                      "--part-format nexus",
+                      "-t", fn_output_aln,
+                      "-p", fn_output_part)
+    system(cmd_amas)
+}
+
+# function: convert "N" and "?" to gaps
+f_unknown2gap <- function(fn_fasta, fn_output) {
+    # read the DNA alignment
+    seq <- Biostrings::readBStringSet(fn_fasta, format="fasta")
+
+    # convert "N" to gaps
+    for (i in seq_along(seq)) {
+        seq[i] <- gsub("N", "-", seq[i])
+        seq[i] <- gsub("\\?", "-", seq[i])
+    }
+
+    # save the new DNA alignment
+    Biostrings::writeXStringSet(seq, filepath=fn_output)
+}
+
+# function: extract best models for each partition
+f_extract_best_models <- function(fn_best_models, fn_partition) {
+    # open nexus file
+    ls_partition <- readLines(fn_partition)
+
+    # open best model per locus
+    df_model <- data.table::fread(fn_best_models)
+
+    # extract the partition names from the nexus file
+    ls_charset <- grep("charset", ls_partition, value=TRUE, ignore.case=TRUE)
+    ls_charset <- lapply(ls_charset, function(line) {
+        locus <- str_match(line, "charset\\s+(\\S+)\\s*=")[,2]
+        coords <- str_match(line, "=\\s*(.+?);")[,2]
+        data.frame(locus=locus, coords=str_trim(coords))
+    })
+
+    # combine the results into a single data frame
+    df_charset <- do.call(rbind, ls_charset)
+
+    # update locus name
+    df_charset$locus <- sapply(df_charset$locus, function(x) {
+        ls_parts <- unlist(strsplit(x, split="_"))
+        ls_parts[length(ls_parts)]
+    })
+
+    # merge the two data.frames
+    df_merge <- merge(df_charset, df_model, by="locus", all.x=TRUE)
+
+    return(df_merge)
+}
+
+# function: run IQ-Tree 2 (fix topology)
+f_iqtree2_fixtop <- function(fn_input, fn_tree, fn_partition, prefix, thread, is_redo, exe_iqtree2) {
+    cmd_iqtree2 <- paste(exe_iqtree2,
+                         "-s", fn_input,
+                         "-g", fn_tree,
+                         "--prefix", prefix,
+                         "-T", thread, "--quiet")
+
+    if (!is.null(fn_partition) && fn_partition != "") {
+        cmd_iqtree2 <- paste(cmd_iqtree2, "-p", fn_partition)
+    }        
+
+    if (is_redo) {
+        cmd_iqtree2 <- paste(cmd_iqtree2, "-redo")
+    }
+
+    system(cmd_iqtree2)
+}
