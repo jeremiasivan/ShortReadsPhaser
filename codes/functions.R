@@ -62,8 +62,6 @@ f_bwa_mem <-  function(fn_target_loci, fn_fastq_r1, fn_fastq_r2, fn_bam_sort, fn
     # calculate per-locus depth
     cmd_depth <- paste(exe_samtools, "depth", "-a", fn_bam_dedup, ">", fn_depth)
     system(cmd_depth)
-
-
 }
 
 # function: variant calling
@@ -111,46 +109,56 @@ f_generate_haplotypes <- function(fn_target_loci, fn_bed, fn_snps_vcf, fn_hap1, 
 }
 
 # function: extract exon coordinates from a flanked sequence (source: Claude)
-f_locate_exons <- function(fn_cds, fn_flanked) {
+f_locate_exons <- function(fn_cds, fn_flanked, min_coverage, min_identity) {
     # open the sequences
-    cds <- toupper(as.character(Biostrings::readBStringSet(fn_cds)[[1]]))
-    ref <- toupper(as.character(Biostrings::readBStringSet(fn_flanked)[[1]]))
+    cds <- as.character(Biostrings::readBStringSet(fn_cds)[[1]])
+    ref <- as.character(Biostrings::readBStringSet(fn_flanked)[[1]])
 
-    # check if flanked sequence is + or - strand
-    best <- NULL
-    for (strand in c("+", "-")) {
-        # check the strand and reverse complement if necessary
-        query <- ifelse (strand == "+",
-                         ref,
-                         as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(ref))))
-
-        # align the CDS to the flanked reference
-        aln <- pwalign::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(query), type="global-local")
-
-        # extract the aligned positions and calculate identity
-        p <- unlist(strsplit(as.character(pwalign::pattern(aln)), ""))     # aligned CDS
-        q <- unlist(strsplit(as.character(pwalign::subject(aln)), ""))     # aligned flanked
-
-        # extract the starting position of the aligned sites
-        ref_pos   <- cumsum(q != "-") + pwalign::start(pwalign::subject(aln)) - 1
-        mapped    <- p != "-" & q != "-"
-        positions <- ref_pos[mapped]
-        identity  <- mean(p[mapped] == q[mapped])
-        if (is.null(best) || length(positions) > length(best$positions)) {
-            best <- list(strand=strand, positions=positions, identity=identity, unmapped=sum(p != "-" & q == "-"))
-        }
-    }
-
-    # accept only if high identity
-    if (length(best$positions) < 0.9*nchar(cds) || best$identity < 0.95) {
+    # remove padded Ns
+    cds <- toupper(gsub("n", "", cds, fixed=TRUE))
+    if (nchar(cds) == 0) {
         return(NULL)
     }
 
-    # extract consecutive positions
-    breaks <- which(diff(best$positions) != 1)
-    df_output <- data.table::data.table(strand=best$strand, identity=round(best$identity, 4), unmapped=best$unmapped,
-                                        start=best$positions[c(1, breaks + 1)], end=best$positions[c(breaks, length(best$positions))])
+    # extract the first and last positions across all exons in the flanked sequence
+    exon_stretch <- gregexpr("[[:upper:]]+", ref)[[1]]
+    if (exon_stretch[1] == -1) {
+        return(NULL)
+    }
 
+    # extract the start and end positions of all exons
+    exon_start <- as.integer(exon_stretch)
+    exon_end   <- exon_start + attr(exon_stretch, "match.length") - 1L
+
+    # concatenate all exons
+    exon_concat <- toupper(paste(substring(ref, exon_start, exon_end), collapse=""))
+    exon_coords <- unlist(Map(seq, exon_start, exon_end))
+    
+    # compare the CDS and concatenated exons
+    if (exon_concat == cds) {
+        positions <- exon_coords
+        identity  <- 1
+    } else {
+        aln <- pwalign::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(segments), type="global")
+        aln_cds   <- unlist(strsplit(as.character(pwalign::pattern(aln)), ""))
+        aln_ref   <- unlist(strsplit(as.character(pwalign::subject(aln)), ""))
+ 
+        # extract aligned positions and calculate identity
+        exon_idx  <- cumsum(aln_ref != "-") + pwalign::start(pwalign::subject(aln)) - 1
+        mapped    <- aln_cds != "-" & aln_ref != "-"
+        positions <- exon_coords[exon_idx[mapped]]
+
+        identity  <- mean(aln_cds[mapped] == aln_ref[mapped])
+        if (length(positions) < min_coverage * nchar(cds) || identity < min_identity) {
+            return(NULL)
+        }
+    }
+ 
+    # collapse consecutive positions into intervals
+    breaks    <- which(diff(positions) != 1)
+    df_output <- data.table::data.table(strand="+", identity=round(identity, 4), unmapped=nchar(cds) - length(positions),
+                                        start=positions[c(1, breaks + 1)], end=positions[c(breaks, length(positions))])
+ 
     return (df_output)
 }
 

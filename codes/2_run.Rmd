@@ -148,7 +148,7 @@ df_exons <- foreach (locus=ls_locus, .combine='rbind') %dopar% {
     }
 
     # extract exon coordinates
-    exons <- f_locate_exons(fn_cds, fn_flanked)
+    exons <- f_locate_exons(fn_cds, fn_flanked, min_coverage=0.9, min_identity=0.95)
     if (is.null(exons)) {
         log4r::warn(fn_logger, paste0(locus, ": CDS could not be aligned to the flanked sequence"))
         return(NULL)
