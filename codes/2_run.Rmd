@@ -119,19 +119,21 @@ for (i in seq_len(nrow(df_blocks_whatshap))) {
     # run Bcftools consensus
     fn_hap1 <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_h1.fna"))
     fn_hap2 <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_h2.fna"))
-    f_generate_haplotypes(fn_target_loci = fn_refseq,
-                          fn_bed         = fn_mask_bed,
-                          fn_snps_vcf    = fn_snps_vcf_gz,
-                          fn_hap1        = fn_hap1,
-                          fn_hap2        = fn_hap2,
-                          exe_bcftools   = params$exe_bcftools)
+    if (!all(file.exists(fn_hap1, fn_hap2)) || params$redo) {
+        f_generate_haplotypes(fn_target_loci = fn_refseq,
+                              fn_bed         = fn_mask_bed,
+                              fn_snps_vcf    = fn_snps_vcf_gz,
+                              fn_hap1        = fn_hap1,
+                              fn_hap2        = fn_hap2,
+                              exe_bcftools   = params$exe_bcftools)
 
-    # update the sequence header
-    for (h in c("h1", "h2")) {
-        fn_hap     <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_", h, ".fna"))
-        seq        <- Biostrings::readBStringSet(fn_hap)
-        names(seq) <- paste0(locus, "_PS", ps, "_", h)
-        Biostrings::writeXStringSet(seq, filepath=fn_hap)
+        # update the sequence header
+        for (h in c("h1", "h2")) {
+            fn_hap     <- file.path(outdir_haplotypes, paste0(locus, ".PS", ps, "_", h, ".fna"))
+            seq        <- Biostrings::readBStringSet(fn_hap)
+            names(seq) <- paste0(locus, "_PS", ps, "_", h)
+            Biostrings::writeXStringSet(seq, filepath=fn_hap)
+        }
     }
 }
 ```
@@ -205,7 +207,7 @@ foreach (locus = ls_locus) %dopar% {
     # check if query sequence is all Ns
     seq   <- Biostrings::readBStringSet(fn_query)
     n_N   <- Biostrings::letterFrequency(seq, letters = "Nn")[, 1]
-    all_N <- n_N == width(seq) & width(seq) > 0
+    all_N <- n_N == Biostrings::width(seq) & Biostrings::width(seq) > 0
     if (any(all_N)) {
         return(NULL)
     }

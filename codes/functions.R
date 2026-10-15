@@ -139,7 +139,7 @@ f_locate_exons <- function(fn_cds, fn_flanked, min_coverage, min_identity) {
         positions <- exon_coords
         identity  <- 1
     } else {
-        aln <- pwalign::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(segments), type="global")
+        aln <- pwalign::pairwiseAlignment(Biostrings::BStringSet(cds), Biostrings::BStringSet(exon_concat), type="global")
         aln_cds   <- unlist(strsplit(as.character(pwalign::pattern(aln)), ""))
         aln_ref   <- unlist(strsplit(as.character(pwalign::subject(aln)), ""))
  
@@ -234,6 +234,10 @@ f_read_gappa_assignments <- function(dir_epa_ng, rank) {
 
     # combine all assignments into a data.frame
     ls_assign <- lapply(fn_per_query, function(file) {
+        if (file.size(file) == 0) {
+            return(NULL)
+        }
+
         df <- data.table::fread(file)
         df$locus <- basename(dirname(dirname(file)))
         df
