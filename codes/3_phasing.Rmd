@@ -14,7 +14,10 @@ sapply(c(outdir_phased), function(x) {
 # create two sets of phased loci
 ls_sets <- list(both   = ls_results$blocks[ls_results$blocks$tier == "both", ],
                 single = ls_results$blocks[ls_results$blocks$tier %in% c("both", "single"), ])
-ls_sets <- lapply(ls_sets, function(x) { x[x$decision %in% c("keep", "flip"), ] })
+ls_sets <- lapply(ls_sets, function(x) {
+    x <- as.data.frame(x)
+    x[x$decision %in% c("keep", "flip"), ]
+})
 sapply(names(ls_sets), function(x) { dir.create(file.path(outdir_phased, x), recursive=T, showWarnings=F) })
 
 # create doSNOW cluster
@@ -29,19 +32,19 @@ df_summary <- foreach(locus = ls_locus, .combine='rbind') %dopar% {
 
     # iterate over individual sets
     ls_out <- lapply(names(ls_sets), function(set) {
-        blocks <- ls_sets[[set]][ls_sets[[set]]$locus == locus, ]
-        if (nrow(blocks) == 0) {
+        df_blocks <- ls_sets[[set]][ls_sets[[set]]$locus == locus, ]
+        if (nrow(df_blocks) == 0) {
             return(NULL)
         }
 
         # extract the haplotype blocks
-        haps        <- f_build_phased_locus(block_cds, blocks)
+        haps        <- f_build_phased_locus(block_cds, df_blocks)
         names(haps) <- paste0(params$sample, "_", names(haps))
         Biostrings::writeXStringSet(haps, filepath=file.path(outdir_phased, set, paste0(locus, ".fna")))
 
         data.table::data.table(set        = set,
                                locus      = locus,
-                               n_oriented = nrow(blocks),
+                               n_oriented = nrow(df_blocks),
                                n_sites    = sum(strsplit(as.character(haps[[1]]), "")[[1]] != "N"))
     })
     
