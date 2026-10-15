@@ -45,27 +45,31 @@ if (!all(file.exists(fn_fastq_r1, fn_fastq_r2))) {
 fn_bam_sort  <- file.path(outdir_mapping, paste0(params$sample, ".sorted.bam"))
 fn_bam_dedup <- file.path(outdir_mapping, paste0(params$sample, ".dedup.bam"))
 fn_depth     <- file.path(outdir_mapping, "locus_depth.tsv")
-f_bwa_mem(fn_target_loci = fn_target_loci_flanked,
-          fn_fastq_r1    = fn_fastq_r1,
-          fn_fastq_r2    = fn_fastq_r2,
-          fn_bam_sort    = fn_bam_sort,
-          fn_bam_dedup   = fn_bam_dedup,
-          fn_depth       = fn_depth,
-          thread         = params$thread,
-          exe_bwa        = params$exe_bwa,
-          exe_samtools   = params$exe_samtools)
+if (!all(file.exists(fn_bam_sort, fn_bam_dedup, fn_depth)) || params$redo) {
+    f_bwa_mem(fn_target_loci = fn_target_loci_flanked,
+              fn_fastq_r1    = fn_fastq_r1,
+              fn_fastq_r2    = fn_fastq_r2,
+              fn_bam_sort    = fn_bam_sort,
+              fn_bam_dedup   = fn_bam_dedup,
+              fn_depth       = fn_depth,
+              thread         = params$thread,
+              exe_bwa        = params$exe_bwa,
+              exe_samtools   = params$exe_samtools)
+}
 
 # run Bcftools for variant calling
 fn_vcf_gz          <- file.path(outdir_variant_calls, paste0(params$sample, ".vcf.gz"))
 fn_filtered_vcf_gz <- file.path(outdir_variant_calls, paste0(params$sample, ".filtered.vcf.gz"))
-f_variant_calling(fn_target_loci     = fn_target_loci_flanked,
-                  fn_bam             = fn_bam_dedup,
-                  fn_vcf_gz          = fn_vcf_gz,
-                  fn_vcf_gz_filtered = fn_filtered_vcf_gz,
-                  min_depth          = 12,
-                  max_depth          = 150,
-                  thread             = params$thread,
-                  exe_bcftools       = params$exe_bcftools)
+if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz)) || params$redo) {
+    f_variant_calling(fn_target_loci     = fn_target_loci_flanked,
+                      fn_bam             = fn_bam_dedup,
+                      fn_vcf_gz          = fn_vcf_gz,
+                      fn_vcf_gz_filtered = fn_filtered_vcf_gz,
+                      min_depth          = 12,
+                      max_depth          = 150,
+                      thread             = params$thread,
+                      exe_bcftools       = params$exe_bcftools)
+}
 ```
 
 ```{r whatshap}
@@ -73,12 +77,14 @@ f_variant_calling(fn_target_loci     = fn_target_loci_flanked,
 fn_phased_vcf      <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf"))
 fn_phased_vcf_gz   <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf.gz"))
 fn_blocks_whatshap <- file.path(outdir_variant_calls, "blocks_whatshap.tsv")
-f_whatshap(fn_target_loci     = fn_target_loci_flanked,
-           fn_vcf_gz_filtered = fn_filtered_vcf_gz,
-           fn_bam             = fn_bam_dedup,
-           fn_phased_vcf      = fn_phased_vcf,
-           fn_blocks_whatshap = fn_blocks_whatshap,
-           exe_whatshap       = params$exe_whatshap)
+if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz)) || params$redo) {
+    f_whatshap(fn_target_loci     = fn_target_loci_flanked,
+               fn_vcf_gz_filtered = fn_filtered_vcf_gz,
+               fn_bam             = fn_bam_dedup,
+               fn_phased_vcf      = fn_phased_vcf,
+               fn_blocks_whatshap = fn_blocks_whatshap,
+               exe_whatshap       = params$exe_whatshap)
+}
 
 # generate putative haplotypes
 df_blocks_whatshap <- data.table::fread(fn_blocks_whatshap)
@@ -86,8 +92,10 @@ colnames(df_blocks_whatshap) <- c("sample", "locus", "PS", "from", "to", "varian
 
 # exclude indels
 fn_snps_vcf_gz <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.snps.vcf.gz"))
-system(paste(params$exe_bcftools, "view", "-v snps -Oz", "-o", fn_snps_vcf_gz, fn_phased_vcf_gz))
-system(paste(params$exe_bcftools, "index", "-f", fn_snps_vcf_gz))
+if (!file.exists(fn_snps_vcf_gz) || params$redo) {
+    system(paste(params$exe_bcftools, "view", "-v snps -Oz", "-o", fn_snps_vcf_gz, fn_phased_vcf_gz))
+    system(paste(params$exe_bcftools, "index", "-f", fn_snps_vcf_gz))
+}
 
 # iterate over blocks
 for (i in seq_len(nrow(df_blocks_whatshap))) {
