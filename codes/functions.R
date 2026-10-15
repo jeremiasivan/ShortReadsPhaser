@@ -267,7 +267,7 @@ f_read_gappa_assignments <- function(dir_epa_ng, tax_rank) {
 }
 
 # function: find the two parental lineages for every block (source: Claude)
-f_assign_blocks <- function(df_assign, min_alwr) {
+f_assign_blocks <- function(df_assign, min_alwr, lineage_A=NULL, lineage_B=NULL) {
     # extract unique blocks
     df_blocks <- df_assign %>%
                     select("locus", "PS") %>%
@@ -312,24 +312,60 @@ f_assign_blocks <- function(df_assign, min_alwr) {
 
     # assign decisions per block
     df_blocks$decision <- "ambiguous"
+    df_blocks$tier     <- "none"
+
     for (i in 1:nrow(df_blocks)) {
-        # extract the lineages of the two haplotypes
         l1 <- df_blocks$h1_lineage[i]
         l2 <- df_blocks$h2_lineage[i]
 
-        # assign decisions based on the lineages and confidence
         if (is_both[i] && l1 == lineage_A && l2 == lineage_B) {
             df_blocks$decision[i] <- "keep"
+            df_blocks$tier[i]     <- "both"
         } else if (is_both[i] && l1 == lineage_B && l2 == lineage_A) {
             df_blocks$decision[i] <- "flip"
+            df_blocks$tier[i]     <- "both"
         } else if (is_both[i] && l1 == l2) {
             df_blocks$decision[i] <- "same"
         } else if (is_conf1[i] && l1 %in% c(lineage_A, lineage_B) && !(l2 %in% c(lineage_A, lineage_B))) {
-            df_blocks$decision[i] <- ifelse(l1 == lineage_A, "keep", "flip")      
+            df_blocks$decision[i] <- ifelse(l1 == lineage_A, "keep", "flip")
+            df_blocks$tier[i]     <- "single"
         } else if (is_conf2[i] && l2 %in% c(lineage_A, lineage_B) && !(l1 %in% c(lineage_A, lineage_B))) {
-            df_blocks$decision[i] <- ifelse(l2 == lineage_A, "flip", "keep")      
+            df_blocks$decision[i] <- ifelse(l2 == lineage_A, "flip", "keep")
+            df_blocks$tier[i]     <- "single"
         }
     }
 
     return(list(blocks=df_blocks, pairs=df_pairs, lineage_A=lineage_A, lineage_B=lineage_B))
+}
+
+# function: generate the unphased consensus of a locus (IUPAC codes at all heterozygous sites)
+f_generate_consensus <- function(fn_target_loci, fn_snps_vcf, fn_out, exe_bcftools) {
+    system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H I", fn_snps_vcf, ">", fn_out))
+}
+
+# function: build phased locus from the consensus and the block haplotypes (source: Claude)
+f_build_phased_locus <- function(consensus, block_cds, df_blocks) {
+    h0 <- strsplit(toupper(as.character(consensus)), "")[[1]]
+    h1 <- h0
+
+    # iterate over blocks
+    for (i in 1:nrow(df_blocks)) {
+        prefix   <- paste0(df_blocks$locus[i], "_PS", df_blocks$PS[i])
+
+        # extract haplotype blocks
+        block_h1 <- strsplit(toupper(as.character(block_cds[[paste0(prefix, "_h1")]])), "")[[1]]
+        block_h2 <- strsplit(toupper(as.character(block_cds[[paste0(prefix, "_h2")]])), "")[[1]]
+        covered  <- block_h1 != "N"
+
+        # keep: block h1 is lineage A; flip: block h2 is lineage A
+        if (df_blocks$decision[i] == "keep") {
+            h0[covered] <- block_h1[covered]
+            h1[covered] <- block_h2[covered]
+        } else if (df_blocks$decision[i] == "flip") {
+            h0[covered] <- block_h2[covered]
+            h1[covered] <- block_h1[covered]
+        }
+    }
+
+    return(Biostrings::BStringSet(c(h0=paste(h0, collapse=""), h1=paste(h1, collapse=""))))
 }
