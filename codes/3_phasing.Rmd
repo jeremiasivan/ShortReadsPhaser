@@ -27,10 +27,12 @@ nwcl <- makeCluster(params$thread)
 registerDoSNOW(nwcl)
 
 # iterate over loci
-ls_locus   <- gsub("\\.fna$", "", list.files(outdir_blocks_cds, pattern="^[^.]+\\.fna$"))
+ls_locus <- gsub("\\.fna$", "", list.files(outdir_blocks_cds, pattern="^[^.]+\\.fna$"))
+ls_locus <- unique(gsub("_filtered", "", ls_locus))
+
 df_summary <- foreach(locus = ls_locus, .combine='rbind') %dopar% {
     # open the block sequence
-    block_cds <- Biostrings::readBStringSet(file.path(outdir_blocks_cds, paste0(locus, ".fna")))
+    block_cds <- Biostrings::readBStringSet(file.path(outdir_blocks_cds, paste0(locus, "_filtered.fna")))
 
     # iterate over individual sets
     ls_out <- lapply(names(ls_sets), function(set) {
@@ -94,6 +96,11 @@ for (set in names(ls_sets)) {
                     fn_sample = fn_query,
                     fn_out    = fn_output_alignment,
                     exe_mafft = params$exe_mafft)
+
+        # remove '_R_' for reverse-complemented sequence
+        aln <- Biostrings::readBStringSet(fn_output_alignment)
+        names(aln) <- gsub("^_R_", "", names(aln))
+        Biostrings::writeXStringSet(aln, filepath=fn_output_alignment)
     }
 
     # create output directory

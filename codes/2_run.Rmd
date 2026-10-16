@@ -77,7 +77,7 @@ if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz)) || params$redo) {
 fn_phased_vcf      <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf"))
 fn_phased_vcf_gz   <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf.gz"))
 fn_blocks_whatshap <- file.path(outdir_variant_calls, "blocks_whatshap.tsv")
-if (!all(file.exists(fn_vcf_gz, fn_filtered_vcf_gz, fn_blocks_whatshap)) || params$redo) {
+if (!file.exists(fn_blocks_whatshap) || params$redo) {
     f_whatshap(fn_target_loci     = fn_target_loci_flanked,
                fn_vcf_gz_filtered = fn_filtered_vcf_gz,
                fn_bam             = fn_bam_dedup,
@@ -160,7 +160,7 @@ df_exons <- foreach (locus=ls_locus, .combine='rbind') %dopar% {
     # extract exon coordinates
     exons <- f_locate_exons(fn_cds, fn_flanked, params$min_coverage, params$min_identity)
     if (is.null(exons)) {
-        log4r::warn(fn_logger, paste0(locus, ": CDS could not be aligned to the flanked sequence"))
+        log4r::warn(fn_logger, paste0(locus, ": CDS could not be found on the flanked sequence"))
         return(NULL)
     }
 
@@ -183,8 +183,7 @@ stopCluster(nwcl)
 fn_exon_table <- file.path(outdir_blocks_cds, "exon_table.tsv")
 data.table::fwrite(df_exons, file=fn_exon_table, sep="\t", quote=F)
 
-log4r::info(fn_logger, paste0("Exon tables: ", length(unique(df_exons$locus)), " loci ",
-                              "(", sum(df_exons$strand[!duplicated(df_exons$locus)] == "-"), " minus strand)"))
+log4r::info(fn_logger, paste0("Exon tables: ", length(unique(df_exons$locus)), " loci."))
 ```
 
 ```{r add-query}
@@ -205,17 +204,22 @@ foreach (locus = ls_locus) %dopar% {
     }
 
     # check if query sequence is all Ns
-    seq   <- Biostrings::readBStringSet(fn_query)
-    n_N   <- Biostrings::letterFrequency(seq, letters = "Nn")[, 1]
-    all_N <- n_N == Biostrings::width(seq) & Biostrings::width(seq) > 0
-    if (any(all_N)) {
+    seq <- Biostrings::readBStringSet(fn_query)
+    n_N <- Biostrings::letterFrequency(seq, letters = "Nn")[, 1]
+    seq <- seq[n_N < Biostrings::width(seq)]
+    if (length(seq) == 0) {
+        log4r::warn(fn_logger, paste0(locus, ": all block haplotypes are Ns. Skipped."))
         return(NULL)
     }
+
+    # save the filtered sequence
+    fn_query_filtered <- file.path(outdir_blocks_cds, paste0(locus, "_filtered.fna"))
+    Biostrings::writeXStringSet(seq, filepath=fn_query_filtered)
 
     # MAFFT --add
     fn_output_alignment <- file.path(outdir_mafftadd, paste0(locus, ".fna"))
     f_mafft_add(fn_ref    = fn_ref,
-                fn_sample = fn_query,
+                fn_sample = fn_query_filtered,
                 fn_out    = fn_output_alignment,
                 exe_mafft = params$exe_mafft)
 

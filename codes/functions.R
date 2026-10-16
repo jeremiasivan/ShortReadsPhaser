@@ -326,10 +326,10 @@ f_assign_blocks <- function(df_assign, min_alwr, input_lineage_A=NULL, input_lin
             df_blocks$tier[i]     <- "both"
         } else if (is_both[i] && l1 == l2) {
             df_blocks$decision[i] <- "same"
-        } else if (is_conf1[i] && l1 %in% c(lineage_A, lineage_B) && !(l2 %in% c(lineage_A, lineage_B))) {
+        } else if (is_conf1[i] && l1 %in% c(lineage_A, lineage_B) && l2 != l1) {
             df_blocks$decision[i] <- ifelse(l1 == lineage_A, "keep", "flip")
             df_blocks$tier[i]     <- "single"
-        } else if (is_conf2[i] && l2 %in% c(lineage_A, lineage_B) && !(l1 %in% c(lineage_A, lineage_B))) {
+        } else if (is_conf2[i] && l2 %in% c(lineage_A, lineage_B) && l1 != l2) {
             df_blocks$decision[i] <- ifelse(l2 == lineage_A, "flip", "keep")
             df_blocks$tier[i]     <- "single"
         }
