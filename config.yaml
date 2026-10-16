@@ -1,0 +1,50 @@
+# ============================================================
+#  ShortReadsPhaser config file
+#
+#  Edit this file, then run:
+#    Rscript run_pipeline.R --config config.yaml
+# ============================================================
+
+# --- General -------------------------------------------------
+codedir:  "/home/user/ShortReadsPhaser/"  # path to ShortReadsPhaser directory
+prefix:   ""                              # output prefix (used for folder and filenames) (default: "" (sample name))
+outdir:   "/home/user/output"             # output directory
+thread:   1                               # number of parallel threads (default: 1)
+redo:     FALSE                           # re-run even if output files exist (default: FALSE)
+
+# --- Executables ---------------------------------------------
+exe_amas:     "AMAS.py"                   # path to AMAS executable
+exe_bcftools: "bcftools"                  # path to bcftools executable
+exe_bwa:      "bwa"                       # path to BWA executable
+exe_epa_ng:   "epa-ng"                    # path to EPA-ng executable
+exe_gappa:    "gappa"                     # path to gappa executable
+exe_mafft:    "mafft"                     # path to MAFFT executable
+exe_iqtree:   "iqtree2"                   # path to IQ-TREE executable
+exe_samtools: "samtools"                  # path to samtools executable
+exe_whatshap: "whatshap"                  # path to WhatsHap executable
+
+# --- Backbone (reference) ------------------------------------
+dir_backbone_alignment:        ""         # directory of per-locus backbone alignments (<locus>.fna)
+dir_backbone_genetrees:        ""         # directory of per-locus backbone gene trees (<locus>.treefile)
+file_backbone_genetree_models: ""         # table of the best substitution model per locus
+file_taxonomy_metadata:        ""         # taxonomy file for EPA-NG
+file_backbone_speciestree:     ""         # backbone species tree in Newick format
+
+# --- Query (new sample) --------------------------------------
+sample:                     ""            # sample name
+dir_fastq_gz:               ""            # directory of the paired-end reads (must be named <sample>_R1.fastq.gz and <sample>_R2.fastq.gz)
+file_query_matches_flanked: ""            # CAPTUS flanked matches of the sample (e.g., DNA_matches_flanked.fna)
+file_query_matches_cds:     ""            # CAPTUS (CDS) matches of the sample (e.g., DNA_matches.fna)
+
+# --- Variables -----------------------------------------------
+# variant calling
+min_depth: 10                # minimum read depth to keep a variant (default: 10)
+max_depth: 80                # maximum read depth to keep a variant (default: 80)
+
+# CAPTUS CDS check
+min_coverage: 0.9            # minimum fraction of the CDS located in the flanked sequence (default: 0.9)
+min_identity: 0.9            # minimum identity between the CDS and the located segments (default: 0.9)
+
+# EPA-ng / gappa
+taxonomy_rank: 1             # taxonomic rank (position in the taxopath) used to assign lineages (default: 1)
+min_alwr:      0.8           # minimum accumulated LWR to call a placement confident (default: 0.8)
