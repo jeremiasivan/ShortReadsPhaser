@@ -88,19 +88,20 @@ for (set in names(ls_sets)) {
         # input files
         fn_ref    <- file.path(params$dir_backbone_alignment, paste0(locus, ".fna"))
         fn_query  <- file.path(outdir_phased, set, paste0(locus, ".fna"))
-        fn_query_captus <- file.path(outdir_best_hits_cds, paste0(locus, ".fna"))
+        fn_query_tool     <- file.path(outdir_best_hits_cds, paste0(locus, ".fna"))
+        fn_query_combined <- file.path(outdir_phased, set, paste0(locus, "_combined.fna"))
 
         # combine the two haplotypes and CAPTUS output
-        seq_query        <- Biostrings::readBStringSet(fn_query)
-        seq_query_captus <- Biostrings::readBStringSet(fn_query_captus)
-        names(seq_query_captus) <- paste0(params$sample, "_captus")
-        seq_query        <- c(seq_query, seq_query_captus)
-        Biostrings::writeXStringSet(seq_query, filepath=fn_query)
+        seq_query             <- Biostrings::readBStringSet(fn_query)
+        seq_query_tool        <- Biostrings::readBStringSet(fn_query_tool)
+        names(seq_query_tool) <- paste0(params$sample, "_", tool)
+        seq_query             <- c(seq_query, seq_query_tool)
+        Biostrings::writeXStringSet(seq_query, filepath=fn_query_combined)
 
         # MAFFT --add
         fn_output_alignment <- file.path(dir_aln_set, paste0(locus, ".fna"))
         f_mafft_add(fn_ref    = fn_ref,
-                    fn_sample = fn_query,
+                    fn_sample = fn_query_combined,
                     fn_out    = fn_output_alignment,
                     exe_mafft = params$exe_mafft)
 

@@ -40,11 +40,20 @@ if (tool == "captus") {
     # extract the list of locus
     ls_locus <- list.dirs(params$dir_hybpiper_query_output, recursive=F, full.names=F)
 
+    # delete previous files
+    if (file.exists(fn_target_loci_flanked)) { unlink(fn_target_loci_flanked) }
+    if (file.exists(fn_target_loci_cds)) { unlink(fn_target_loci_cds) }
+
     # iterate over locus
     for (locus in ls_locus) {
         # input files
         fn_cds <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "sequences", "FNA", paste0(locus, ".FNA"))
         fn_ctg <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "sequences", "intron", paste0(locus, "_supercontig.fasta"))
+
+        if (!all(file.exists(fn_cds, fn_ctg))) {
+            log4r::warn(fn_logger, paste0(locus, ": missing .FNA or _supercontig.fasta file. Skipped."))
+            next
+        }
 
         # output files
         f_extract_hybpiper_best_hits(fn_cds, locus, fn_target_loci_cds)
