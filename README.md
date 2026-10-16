@@ -44,12 +44,12 @@ Short Reads Phaser requires a number of software and R packages to run. We recom
 2. **Install the prerequisites** <br>
     - Create a new conda environment
         ```
-        conda create -n taxontest
-        conda activate taxontest
+        conda create -n shortreadsphaser
+        conda activate shortreadsphaser
         ```
     - Installing prerequisites
         ```
-        conda install -c conda-forge r-data.table r-doSNOW r-log4r r-optparse r-rmarkdown r-tidyverse r-yaml
+        conda install -c conda-forge -c bioconda r-data.table r-doSNOW r-log4r r-optparse r-rmarkdown r-tidyverse r-yaml bioconductor-biostrings amas bcftools bwa epa-ng gappa iqtree mafft samtools whatshap 
         ```
 
 3. **Update the parameters in `config.yaml`** <br>
@@ -58,6 +58,7 @@ Short Reads Phaser requires a number of software and R packages to run. We recom
     ```
     Rscript run_pipeline.R --config config.yaml
     Rscript run_pipeline.R --config config.yaml --redo
+    Rscript run_pipeline.R --config config.yaml --thread 8
     ```
 
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `psmux`. 
