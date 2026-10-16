@@ -250,8 +250,11 @@ f_read_gappa_assignments <- function(dir_epa_ng, tax_rank) {
                 group_by(name) %>%
                 slice_max(aLWR, n=1, with_ties=FALSE) %>%
                 ungroup()
+        if (nrow(df) == 0) {
+            return(NULL)
+        }
 
-        df$lineage <- sapply(strsplit(df$taxopath, ";"), function(path) { path[tax_rank] })
+        df$lineage <- vapply(strsplit(df$taxopath, ";"), function(path) { path[tax_rank] }, character(1))
         df
     })
     df_assign <- data.table::rbindlist(ls_assign)
