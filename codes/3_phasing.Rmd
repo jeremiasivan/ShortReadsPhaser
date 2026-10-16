@@ -27,8 +27,7 @@ nwcl <- makeCluster(params$thread)
 registerDoSNOW(nwcl)
 
 # iterate over loci
-ls_locus <- gsub("\\.fna$", "", list.files(outdir_blocks_cds, pattern="^[^.]+\\.fna$"))
-ls_locus <- unique(gsub("_filtered", "", ls_locus))
+ls_locus <- gsub("_filtered\\.fna$", "", list.files(outdir_blocks_cds, pattern="_filtered\\.fna$"))
 
 df_summary <- foreach(locus = ls_locus, .combine='rbind') %dopar% {
     # open the block sequence

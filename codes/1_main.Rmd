@@ -44,15 +44,15 @@ params:
 
   # --- Variables -----------------------------------------------
   # variant calling
-  min_depth: 15 
-  max_depth: 150
+  min_depth: 10
+  max_depth: 80
 
   # CAPTUS CDS check
   min_coverage: 0.9 
   min_identity: 0.9
 
   # EPA-NG
-  taxonomy_rank: 3
+  taxonomy_rank: 1
   min_alwr: 0.8
 ---
 
