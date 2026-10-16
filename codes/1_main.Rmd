@@ -39,8 +39,14 @@ params:
   # new sample (i.e., query)
   sample: ""
   dir_fastq_gz: ""
+  tool: "captus"
+
+  # CAPTUS output (for tool=="captus")
   file_query_matches_flanked: ""
   file_query_matches_cds: ""
+
+  # HybPiper output (for tool=="hybpiper")
+  dir_hybpiper_query_output: ""
 
   # --- Variables -----------------------------------------------
   # variant calling

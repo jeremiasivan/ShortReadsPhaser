@@ -86,8 +86,16 @@ for (set in names(ls_sets)) {
     # iterate over loci
     foreach (locus = ls_locus) %dopar% {
         # input files
-        fn_ref   <- file.path(params$dir_backbone_alignment, paste0(locus, ".fna"))
-        fn_query <- file.path(outdir_phased, set, paste0(locus, ".fna"))
+        fn_ref    <- file.path(params$dir_backbone_alignment, paste0(locus, ".fna"))
+        fn_query  <- file.path(outdir_phased, set, paste0(locus, ".fna"))
+        fn_query_captus <- file.path(outdir_best_hits_cds, paste0(locus, ".fna"))
+
+        # combine the two haplotypes and CAPTUS output
+        seq_query        <- Biostrings::readBStringSet(fn_query)
+        seq_query_captus <- Biostrings::readBStringSet(fn_query_captus)
+        names(seq_query_captus) <- paste0(params$sample, "_captus")
+        seq_query        <- c(seq_query, seq_query_captus)
+        Biostrings::writeXStringSet(seq_query, filepath=fn_query)
 
         # MAFFT --add
         fn_output_alignment <- file.path(dir_aln_set, paste0(locus, ".fna"))

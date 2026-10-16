@@ -61,7 +61,7 @@ cfg <- yaml::read_yaml(opt$config)
 required_fields <- c("codedir", "outdir",
                      "dir_backbone_alignment", "dir_backbone_genetrees",
                      "file_backbone_genetree_models", "file_taxonomy_metadata", "file_backbone_speciestree",
-                     "sample", "dir_fastq_gz", "file_query_matches_flanked", "file_query_matches_cds")
+                     "sample", "dir_fastq_gz", "tool")
 
 # check if required fields are missing
 missing <- setdiff(required_fields, names(cfg))
@@ -81,8 +81,19 @@ f_check_exists(cfg$dir_backbone_genetrees, "dir_backbone_genetrees", is_dir=TRUE
 f_check_exists(cfg$file_backbone_genetree_models, "file_backbone_genetree_models")
 f_check_exists(cfg$file_taxonomy_metadata, "file_taxonomy_metadata")
 f_check_exists(cfg$file_backbone_speciestree, "file_backbone_speciestree")
-f_check_exists(cfg$file_query_matches_flanked, "file_query_matches_flanked")
-f_check_exists(cfg$file_query_matches_cds, "file_query_matches_cds")
+
+# check if tool is valid
+if (!tolower(cfg$tool) %in% c("captus", "hybpiper")) {
+    stop(paste("Invalid tool:", cfg$tool, "(must be 'captus' or 'hybpiper')"))
+}
+
+# check if the input directories exist
+if (tolower(cfg$tool) == "captus") {
+  f_check_exists(cfg$file_query_matches_flanked, "file_query_matches_flanked")
+  f_check_exists(cfg$file_query_matches_cds, "file_query_matches_cds")
+} else if (tolower(cfg$tool) == "hybpiper") {
+  f_check_exists(cfg$dir_hybpiper_query_output, "dir_hybpiper_query_output", is_dir=TRUE)
+}
 
 # check if the paired-end reads follow the expected naming (<sample>_R1/_R2.fastq.gz)
 for (read in c("_R1.fastq.gz", "_R2.fastq.gz")) {
@@ -132,8 +143,12 @@ render_params <- list(
 
   sample                        = cfg$sample,
   dir_fastq_gz                  = cfg$dir_fastq_gz,
+  tool                          = tolower(cfg$tool),
+
   file_query_matches_flanked    = cfg$file_query_matches_flanked,
   file_query_matches_cds        = cfg$file_query_matches_cds,
+
+  dir_hybpiper_query_output     = cfg$dir_hybpiper_query_output,
 
   min_depth                     = as.integer(f_get_param(cfg$min_depth, 10)),
   max_depth                     = as.integer(f_get_param(cfg$max_depth, 80)),

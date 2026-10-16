@@ -21,11 +21,36 @@ sapply(c(outdir_best_hits_cds, outdir_best_hits_flanked, outdir_mapping, outdir_
 ```
 
 ```{r split-loci}
-# extract CAPTUS best hits
+# check tool
+tool <- tolower(params$tool)
+if (!tool %in% c("captus", "hybpiper")) {
+    log4r::error(fn_logger, "Error: invalid tool. Exited.")
+    knitr::knit_exit()
+}
+
+# extract best hits
 fn_target_loci_flanked <- file.path(outdir_best_hits, "target_loci_flanked.fna")
 fn_target_loci_cds     <- file.path(outdir_best_hits, "target_loci_cds.fna")
-f_extract_captus_best_hits(params$file_query_matches_flanked, fn_target_loci_flanked)
-f_extract_captus_best_hits(params$file_query_matches_cds, fn_target_loci_cds)
+
+if (tool == "captus") {
+    f_extract_captus_best_hits(params$file_query_matches_flanked, fn_target_loci_flanked)
+    f_extract_captus_best_hits(params$file_query_matches_cds, fn_target_loci_cds)
+
+} else if (tool == "hybpiper") {
+    # extract the list of locus
+    ls_locus <- list.dirs(params$dir_hybpiper_query_output, recursive=F, full.names=F)
+
+    # iterate over locus
+    for (locus in ls_locus) {
+        # input files
+        fn_cds <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "sequences", "FNA", paste0(locus, ".FNA"))
+        fn_ctg <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "sequences", "intron", paste0(locus, "_supercontig.fasta"))
+
+        # output files
+        f_extract_hybpiper_best_hits(fn_cds, locus, fn_target_loci_cds)
+        f_extract_hybpiper_best_hits(fn_ctg, locus, fn_target_loci_flanked)
+    }
+}
 
 # extract per-locus best hit
 f_split_captus_best_hits(fn_target_loci_flanked, outdir_best_hits_flanked)
@@ -153,14 +178,27 @@ df_exons <- foreach (locus=ls_locus, .combine='rbind') %dopar% {
     fn_cds     <- file.path(outdir_best_hits_cds, paste0(locus, ".fna"))
     fn_flanked <- file.path(outdir_best_hits_flanked, paste0(locus, ".fna"))
     if (!file.exists(fn_cds)) {
-        log4r::warn(fn_logger, paste0(locus, ": no CDS best hit"))
+        log4r::warn(fn_logger, paste0(locus, ": no CDS best hit. Skipped."))
         return(NULL)
     }
 
     # extract exon coordinates
-    exons <- f_locate_exons(fn_cds, fn_flanked, params$min_coverage, params$min_identity)
+    exons <- NULL
+
+    if (tool == "captus") {
+        exons <- f_locate_exons(fn_cds, fn_flanked, params$min_coverage, params$min_identity)
+    } else if (tool == "hybpiper") {
+        fn_gff <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "intronerate", "intronerate.gff")
+        if (!file.exists(fn_gff)) {
+            log4r::warn(fn_logger, paste0(locus, ": no GFF. Skipped."))
+            return(NULL)
+        }
+
+        exons <- f_locate_exons_gff(fn_gff)
+    }
+
     if (is.null(exons)) {
-        log4r::warn(fn_logger, paste0(locus, ": CDS could not be found on the flanked sequence"))
+        log4r::warn(fn_logger, paste0(locus, ": CDS could not be found on the flanked sequence. Skipped."))
         return(NULL)
     }
 

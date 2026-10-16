@@ -19,6 +19,13 @@ f_extract_captus_best_hits <- function(fn_captus_matches, fn_out) {
     Biostrings::writeXStringSet(best_hits, filepath=fn_out)
 }
 
+# function: extract HybPiper top hit
+f_extract_hybpiper_best_hits <- function(fn_hybpiper_match, locus, fn_out) {
+    seq <- Biostrings::readBStringSet(fn_hybpiper_match)
+    names(seq) <- locus
+    Biostrings::writeXStringSet(seq, filepath=fn_out, append=T)
+}
+
 # function: create individual files for each locus
 f_split_captus_best_hits <- function(fn_captus_best_hits, outdir) {
     # open the CAPTUS output
@@ -160,6 +167,14 @@ f_locate_exons <- function(fn_cds, fn_flanked, min_coverage, min_identity) {
                                         start=positions[c(1, breaks + 1)], end=positions[c(breaks, length(positions))])
  
     return (df_output)
+}
+
+# function: extract exon coordinates from GFF file
+f_locate_exons_gff <- function(fn_gff) {
+    gff <- readr::read_delim(fn_gff, delim="\t", comment="#", col_names=FALSE)
+    gff <- gff[gff$X3 == "exon", ]
+    gff <- gff[order(gff$X4), ]
+    data.table::data.table(strand="+", identity=1, unmapped=0, start=gff$X4, end=gff$X5)
 }
 
 # function: extract exons out of a haplotype sequence (source: Claude)

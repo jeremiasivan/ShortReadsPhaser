@@ -33,8 +33,14 @@ file_backbone_speciestree:     ""         # backbone species tree in Newick form
 # --- Query (new sample) --------------------------------------
 sample:                     ""            # sample name
 dir_fastq_gz:               ""            # directory of the paired-end reads (must be named <sample>_R1.fastq.gz and <sample>_R2.fastq.gz)
+tool:                       "captus"      # tool to generate the query matches (options: "captus" or "hybpiper"; default: "captus")
+
+# for CAPTUS (tool: "captus")
 file_query_matches_flanked: ""            # CAPTUS flanked matches of the sample (e.g., DNA_matches_flanked.fna)
 file_query_matches_cds:     ""            # CAPTUS (CDS) matches of the sample (e.g., DNA_matches.fna)
+
+# for HybPiper (tool: "hybpiper")
+dir_hybpiper_query_output:  ""            # directory of the HybPiper output (must contain individual folders for each locus)
 
 # --- Variables -----------------------------------------------
 # variant calling
