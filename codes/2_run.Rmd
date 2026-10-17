@@ -320,8 +320,8 @@ stopCluster(nwcl)
 # read gappa assignments and decide the identity of each block
 df_assign  <- f_read_gappa_assignments(outdir_epa_ng, params$taxonomy_rank)
 ls_results <- f_assign_blocks(df_assign, params$min_alwr)
-if (nrow(ls_results$blocks) == 0) {
-    log4r::error(fn_logger, "Error: no blocks with confident haplotype placement. Try lower min_alwr value.")
+if (nrow(ls_results$blocks) == 0 || is.na(ls_results$lineage_A) || is.na(ls_results$lineage_B)) {
+    log4r::error(fn_logger, "Error: no blocks with confident haplotype placement. Try lower min_alwr value or coarser taxonomy_rank.")
     knitr::knit_exit()
 }
 

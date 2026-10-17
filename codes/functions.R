@@ -197,7 +197,7 @@ f_locate_exons_gff <- function(fn_gff, fn_cds, fn_flanked, min_coverage, min_ide
     }
 
     # extract exon coordinates
-    gff <- readr::read_delim(fn_gff, delim="\t", comment="#", col_names=FALSE)
+    gff <- readr::read_delim(fn_gff, delim="\t", comment="#", col_names=FALSE, show_col_types=FALSE)
     gff <- gff[gff$X3 == "exon", ]
     gff <- gff[order(gff$X4), ]
     
@@ -335,7 +335,7 @@ f_assign_blocks <- function(df_assign, min_alwr, input_lineage_A=NULL, input_lin
                     mutate(h1_lineage="none", h2_lineage="none", h1_aLWR=0, h2_aLWR=0)
 
     # iterate over each block
-    for (i in 1:nrow(df_blocks)) {
+    for (i in seq_len(nrow(df_blocks))) {
         # extract the rows corresponding to the current block
         r1 <- df_assign[df_assign$locus==df_blocks$locus[i] & df_assign$PS==df_blocks$PS[i] & df_assign$hap == "h1", ]
         r2 <- df_assign[df_assign$locus==df_blocks$locus[i] & df_assign$PS==df_blocks$PS[i] & df_assign$hap == "h2", ]
@@ -374,7 +374,7 @@ f_assign_blocks <- function(df_assign, min_alwr, input_lineage_A=NULL, input_lin
     df_blocks$decision <- "ambiguous"
     df_blocks$tier     <- "none"
 
-    for (i in 1:nrow(df_blocks)) {
+    for (i in seq_len(nrow(df_blocks))) {
         l1 <- df_blocks$h1_lineage[i]
         l2 <- df_blocks$h2_lineage[i]
 
