@@ -115,31 +115,17 @@ f_generate_haplotypes <- function(fn_target_loci, fn_bed, fn_snps_vcf, fn_hap1, 
     system(paste(exe_bcftools, "consensus -f", fn_target_loci, "-s sample1 -H 2pIu", "-m", fn_bed, fn_snps_vcf, ">", fn_hap2))
 }
 
-# function: extract exon coordinates from a flanked sequence (source: Claude)
-f_locate_exons <- function(fn_cds, fn_flanked, min_coverage, min_identity) {
-    # open the sequences
-    cds <- as.character(Biostrings::readBStringSet(fn_cds)[[1]])
-    ref <- as.character(Biostrings::readBStringSet(fn_flanked)[[1]])
-
-    # remove padded Ns
-    cds <- toupper(gsub("n", "", cds, fixed=TRUE))
-    if (nchar(cds) == 0) {
-        return(NULL)
-    }
-
-    # extract the first and last positions across all exons in the flanked sequence
-    exon_stretch <- gregexpr("[[:upper:]]+", ref)[[1]]
-    if (exon_stretch[1] == -1) {
-        return(NULL)
-    }
-
-    # extract the start and end positions of all exons
-    exon_start <- as.integer(exon_stretch)
-    exon_end   <- exon_start + attr(exon_stretch, "match.length") - 1L
-
+# function: check CDS identity
+f_verify_exons <- function(cds, ref, exon_start, exon_end, min_coverage, min_identity, strand="+") {
     # concatenate all exons
     exon_concat <- toupper(paste(substring(ref, exon_start, exon_end), collapse=""))
     exon_coords <- unlist(Map(seq, exon_start, exon_end))
+
+    # check for negative strand
+    if (strand == "-") {
+        exon_concat <- as.character(Biostrings::reverseComplement(Biostrings::DNAString(exon_concat)))
+        exon_coords <- rev(exon_coords)
+    }
     
     # compare the CDS and concatenated exons
     if (exon_concat == cds) {
@@ -162,19 +148,68 @@ f_locate_exons <- function(fn_cds, fn_flanked, min_coverage, min_identity) {
     }
  
     # collapse consecutive positions into intervals
+    positions <- sort(positions)
     breaks    <- which(diff(positions) != 1)
-    df_output <- data.table::data.table(strand="+", identity=round(identity, 4), unmapped=nchar(cds) - length(positions),
+    df_output <- data.table::data.table(strand=strand, identity=round(identity, 4), unmapped=nchar(cds) - length(positions),
                                         start=positions[c(1, breaks + 1)], end=positions[c(breaks, length(positions))])
+
+    return (df_output)
+}
+
+# function: extract exon coordinates from a flanked sequence (source: Claude)
+f_locate_exons <- function(fn_cds, fn_flanked, min_coverage, min_identity) {
+    # open the sequences
+    cds <- as.character(Biostrings::readBStringSet(fn_cds)[[1]])
+    ref <- as.character(Biostrings::readBStringSet(fn_flanked)[[1]])
+
+    # remove padded Ns
+    cds <- toupper(gsub("n", "", cds, fixed=TRUE))
+    if (nchar(cds) == 0) {
+        return(NULL)
+    }
+
+    # extract the first and last positions across all exons in the flanked sequence
+    exon_stretch <- gregexpr("[[:upper:]]+", ref)[[1]]
+    if (exon_stretch[1] == -1) {
+        return(NULL)
+    }
+
+    # extract the start and end positions of all exons
+    exon_start <- as.integer(exon_stretch)
+    exon_end   <- exon_start + attr(exon_stretch, "match.length") - 1L
+
+    # verify exon identities
+    df_output <- f_verify_exons(cds, ref, exon_start, exon_end, min_coverage, min_identity)
  
     return (df_output)
 }
 
 # function: extract exon coordinates from GFF file
-f_locate_exons_gff <- function(fn_gff) {
+f_locate_exons_gff <- function(fn_gff, fn_cds, fn_flanked, min_coverage, min_identity) {
+    # open the sequences
+    cds <- as.character(Biostrings::readBStringSet(fn_cds)[[1]])
+    ref <- as.character(Biostrings::readBStringSet(fn_flanked)[[1]])
+
+    # remove padded Ns
+    cds <- toupper(gsub("[Nn]", "", cds))
+    if (nchar(cds) == 0) {
+        return(NULL)
+    }
+
+    # extract exon coordinates
     gff <- readr::read_delim(fn_gff, delim="\t", comment="#", col_names=FALSE)
     gff <- gff[gff$X3 == "exon", ]
     gff <- gff[order(gff$X4), ]
-    data.table::data.table(strand="+", identity=1, unmapped=0, start=gff$X4, end=gff$X5)
+    
+    strand <- unique(gff$X7)
+    if (nrow(gff) == 0 || length(strand) != 1 || !strand %in% c("+", "-")) {
+        return(NULL)
+    }
+
+    # verify exon identities
+    df_output <- f_verify_exons(cds, ref, as.integer(gff$X4), as.integer(gff$X5), min_coverage, min_identity, strand=strand)
+    
+    return(df_output)
 }
 
 # function: extract exons out of a haplotype sequence (source: Claude)

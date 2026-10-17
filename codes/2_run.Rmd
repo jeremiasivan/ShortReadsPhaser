@@ -50,14 +50,20 @@ if (tool == "captus") {
         fn_cds <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "sequences", "FNA", paste0(locus, ".FNA"))
         fn_ctg <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "sequences", "intron", paste0(locus, "_supercontig.fasta"))
 
-        if (!all(file.exists(fn_cds, fn_ctg))) {
-            log4r::warn(fn_logger, paste0(locus, ": missing .FNA or _supercontig.fasta file. Skipped."))
+        # check if .FNA file exists
+        if (!file.exists(fn_cds)) {
+            log4r::warn(fn_logger, paste0(locus, ": missing .FNA file. Skipped."))
             next
+        } else {
+            f_extract_hybpiper_best_hits(fn_cds, locus, fn_target_loci_cds)
         }
 
-        # output files
-        f_extract_hybpiper_best_hits(fn_cds, locus, fn_target_loci_cds)
-        f_extract_hybpiper_best_hits(fn_ctg, locus, fn_target_loci_flanked)
+        # check if _supercontig.fasta file exists
+        if (file.exists(fn_ctg)) {
+            f_extract_hybpiper_best_hits(fn_ctg, locus, fn_target_loci_flanked)
+        } else {
+            f_extract_hybpiper_best_hits(fn_cds, locus, fn_target_loci_flanked)
+        }
     }
 }
 
@@ -182,7 +188,7 @@ nwcl <- makeCluster(params$thread)
 registerDoSNOW(nwcl)
 
 # iterate over loci
-df_exons <- foreach (locus=ls_locus, .combine='rbind') %dopar% {
+df_exons <- foreach (locus=ls_locus, .combine='rbind', .export=c("f_verify_exons")) %dopar% {
     # input files
     fn_cds     <- file.path(outdir_best_hits_cds, paste0(locus, ".fna"))
     fn_flanked <- file.path(outdir_best_hits_flanked, paste0(locus, ".fna"))
@@ -199,11 +205,10 @@ df_exons <- foreach (locus=ls_locus, .combine='rbind') %dopar% {
     } else if (tool == "hybpiper") {
         fn_gff <- file.path(params$dir_hybpiper_query_output, locus, params$sample, "intronerate", "intronerate.gff")
         if (!file.exists(fn_gff)) {
-            log4r::warn(fn_logger, paste0(locus, ": no GFF. Skipped."))
-            return(NULL)
+            exons <- f_locate_exons(fn_cds, fn_flanked, params$min_coverage, params$min_identity)
+        } else {
+            exons <- f_locate_exons_gff(fn_gff, fn_cds, fn_flanked, params$min_coverage, params$min_identity)
         }
-
-        exons <- f_locate_exons_gff(fn_gff)
     }
 
     if (is.null(exons)) {
