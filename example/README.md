@@ -80,6 +80,16 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
 > ✅: consistent with output from `default` parameters<br>
 > ❌: inconsistent with output from `default` parameters
 
+### `min_alwr = 0.9`
+- Number of BUSCO with confident placement for both haplotypes: **89**
+- Number of BUSCO with confident placement for either or both haplotypes: **621**
+- Phylogenetic placements on `89-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0035) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0059) ✅
+- Phylogenetic placements on `621-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0049) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0082) ✅
+
 ### `min_alwr = 0.7`
 - Number of BUSCO with confident placement for both haplotypes: **122**
 - Number of BUSCO with confident placement for either or both haplotypes: **700**
@@ -97,8 +107,18 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
     - Haplotype one: sister to `decipiens_CCA1310` (0.0042) ✅
     - Haplotype two: sister to `relicta_CCA5717` (0.0064) ✅
 - Phylogenetic placements on `737-BUSCO` tree (branch lengths):
-    - Haplotype one: *TBA*
-    - Haplotype two: *TBA*
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0053) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0086) ✅
+
+### `min_alwr = 0.5`
+- Number of BUSCO with confident placement for both haplotypes: **171**
+- Number of BUSCO with confident placement for either or both haplotypes: **776**
+- Phylogenetic placements on `171-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0045) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0065) ✅
+- Phylogenetic placements on `776-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0055) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0087) ✅
 
 ### `dir_backbone_genetrees` uses species tree topology
 - Number of BUSCO with confident placement for both haplotypes: **132**
@@ -107,8 +127,8 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
     - Haplotype one: sister to `decipiens_CCA1310` (0.0039) ✅
     - Haplotype two: sister to `relicta_CCA5717` (0.0067) ✅
 - Phylogenetic placements on `795-BUSCO` tree (branch lengths):
-    - Haplotype one: *TBA*
-    - Haplotype two: *TBA*
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0057) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0091) ✅
 
 ---
-*Last update: 17 October 2026 by Jeremias Ivan*
+*Last update: 18 October 2026 by Jeremias Ivan*
