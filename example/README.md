@@ -46,6 +46,9 @@ taxonomy_rank <- 3
 
 # set the minimum accumulated likelihood weight ratio (alwr) to confidently assign a haplotype placement
 min_alwr <- 0.8
+
+# set the minimum fraction of placements that must agree to call a lineage
+min_consensus_thresh <- 1.0
 ```
 
 ## <a id="04">Results</a>
@@ -74,8 +77,8 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
 ## <a id="05">Using Other Parameters</a>
 
 > [!NOTE]
-> - ✅: consistent output using `default` parameters
-> - ❌: inconsistent with output using `default` parameters
+> ✅: consistent with output from `default` parameters<br>
+> ❌: inconsistent with output from `default` parameters
 
 ### `min_alwr = 0.7`
 - Number of BUSCO with confident placement for both haplotypes: **122**

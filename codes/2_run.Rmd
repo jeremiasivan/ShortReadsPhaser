@@ -308,6 +308,7 @@ foreach (locus = ls_locus) %dopar% {
     # translate placements into lineage name
     f_gappa_assign(fn_jplace = file.path(dir_output, "epa_result.jplace"),
                    fn_taxon  = params$file_taxonomy_metadata,
+                   threshold = params$min_consensus_thresh,
                    outdir    = file.path(dir_output, "assign"),
                    log_file  = fn_epa_ng_log,
                    exe_gappa = params$exe_gappa)

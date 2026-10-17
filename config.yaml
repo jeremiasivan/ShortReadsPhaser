@@ -52,5 +52,6 @@ min_coverage: 0.9            # minimum fraction of the CDS located in the flanke
 min_identity: 0.9            # minimum identity between the CDS and the located segments (default: 0.9)
 
 # EPA-ng / gappa
-taxonomy_rank: 1             # taxonomic rank (position in the taxopath) used to assign lineages (default: 1)
-min_alwr:      0.8           # minimum accumulated LWR to call a placement confident (default: 0.8)
+taxonomy_rank:        1      # taxonomic rank (position in the taxopath) used to assign lineages (default: 1)
+min_alwr:             0.8    # minimum accumulated LWR to call a placement confident (default: 0.8)
+min_consensus_thresh: 1.0    # minimum fraction of placements that must agree to call a lineage (default: 1.0)

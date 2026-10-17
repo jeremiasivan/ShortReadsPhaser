@@ -57,9 +57,10 @@ params:
   min_coverage: 0.9 
   min_identity: 0.9
 
-  # EPA-NG
+  # EPA-NG and Gappa
   taxonomy_rank: 1
   min_alwr: 0.8
+  min_consensus_thresh: 1.0
 ---
 
 ```{r, include=FALSE}

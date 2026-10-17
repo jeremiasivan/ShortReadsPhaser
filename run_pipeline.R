@@ -155,7 +155,8 @@ render_params <- list(
   min_coverage                  = as.numeric(f_get_param(cfg$min_coverage, 0.9)),
   min_identity                  = as.numeric(f_get_param(cfg$min_identity, 0.9)),
   taxonomy_rank                 = as.integer(f_get_param(cfg$taxonomy_rank, 1)),
-  min_alwr                      = as.numeric(f_get_param(cfg$min_alwr, 0.8))
+  min_alwr                      = as.numeric(f_get_param(cfg$min_alwr, 0.8)),
+  min_consensus_thresh          = as.numeric(f_get_param(cfg$min_consensus_thresh, 1.0))
 )
 
 # --- Run ShortReadsPhaser ------------------------------------

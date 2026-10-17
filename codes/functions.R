@@ -274,10 +274,11 @@ f_epa_ng <- function(fn_ref, fn_query, fn_tree, model, outdir, fn_log, exe_epa_n
 }
 
 # run gappa examine assign
-f_gappa_assign <- function(fn_jplace, fn_taxon, outdir, log_file, exe_gappa) {
+f_gappa_assign <- function(fn_jplace, fn_taxon, threshold, outdir, log_file, exe_gappa) {
     cmd_gappa <- paste(exe_gappa, "examine assign",
                        "--jplace-path", fn_jplace,
                        "--taxon-file", fn_taxon,
+                       "--consensus-thresh", threshold,
                        "--per-query-results --allow-file-overwriting",
                        "--out-dir", outdir,
                        ">>", log_file)
