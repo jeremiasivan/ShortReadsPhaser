@@ -234,6 +234,12 @@ f_mafft_add <- function(fn_ref, fn_sample, fn_out, exe_mafft) {
 
 # substitute IQ-TREE2 models to EPA-NG models (source: Claude)
 f_iqtree2epa_ng_model <- function(model) {
+    # check if model is missing
+    if (length(model) == 0 || is.na(model[1]) || model[1] == "") {
+        return(NULL)
+    }
+
+    # define the mapping of IQ-TREE2 models to EPA-NG models
     map <- c(JC69="JC", K2P="K80", HKY85="HKY",
              TN="TN93", TrN="TN93", TNe="TN93ef",
              K3P="K81", TPM1="K81",
@@ -243,6 +249,7 @@ f_iqtree2epa_ng_model <- function(model) {
              TVMe="TVMef")
 
     # extract substitution model and modifiers
+    model <- model[1]
     matrix <- sub("\\+.*", "", model)
     modifiers <- sub("^[^+]*", "", model)
 

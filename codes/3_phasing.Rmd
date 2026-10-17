@@ -75,7 +75,9 @@ registerDoSNOW(nwcl)
 for (set in names(ls_sets)) {
     # extract the list of locus
     ls_locus <- list.files(file.path(outdir_phased, set), recursive=F, full.names=F)
+    ls_locus <- gsub("\\_combined\\.fna", "", ls_locus)
     ls_locus <- gsub("\\.fna", "", ls_locus)
+    ls_locus <- unique(ls_locus)
 
     # create output directory
     dir_aln_set <- file.path(outdir_alignment, set)

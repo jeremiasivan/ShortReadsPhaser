@@ -292,6 +292,10 @@ foreach (locus = ls_locus) %dopar% {
     # place the query on each gene tree
     fn_ref_tree <- file.path(params$dir_backbone_genetrees, paste0(locus, ".treefile"))
     substitution_model <- f_iqtree2epa_ng_model(df_genetree_model$model[df_genetree_model$locus==locus])
+    if (is.null(substitution_model)) {
+        log4r::warn(fn_logger, paste0(locus, ": no substitution model found. Skipped."))
+        return(NULL)
+    }
 
     f_epa_ng(fn_ref     = file.path(dir_output, "reference.fasta"),
              fn_query   = file.path(dir_output, "query.fasta"),
@@ -316,6 +320,10 @@ stopCluster(nwcl)
 # read gappa assignments and decide the identity of each block
 df_assign  <- f_read_gappa_assignments(outdir_epa_ng, params$taxonomy_rank)
 ls_results <- f_assign_blocks(df_assign, params$min_alwr)
+if (nrow(ls_results$blocks) == 0) {
+    log4r::error(fn_logger, "Error: no blocks with confident haplotype placement. Try lower min_alwr value.")
+    knitr::knit_exit()
+}
 
 # save output data.frames
 data.table::fwrite(ls_results$blocks, file=file.path(outdir_assignment, "block_assignments.tsv"), sep="\t", quote=F)
