@@ -57,7 +57,7 @@ We first retrieved all CDS blocks across the 1,187 BUSCO loci, and excluded thos
 | All Ns   | 3      | 8       |  
 | Passed   | 1,184  | 4,676   |
 
-After running EPA-NG, we found that the most common parental lineages recovered from the gene trees are `Curviptera` and `Falcatae`. Across the 4,676 blocks:
+After running EPA-NG, we found that the most common parental lineages recovered from the gene trees are `Curviptera` and `Falcatae`. Across the 4,676 blocks, there were 3,109 blocks unresolved at series-level (`taxonomic_rank==3`), while the rest (1,567 blocks) can be categorised as:
 
 | Criterion                                       | #Blocks |
 | ----------------------------------------------- | ------: |
@@ -74,15 +74,38 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
 ## <a id="05">Using Other Parameters</a>
 
 > [!NOTE]
-> ✅: consistent output using `default` parameters
-> ❌: inconsistent with output using `default` parameters
+> - ✅: consistent output using `default` parameters
+> - ❌: inconsistent with output using `default` parameters
 
 ### `min_alwr = 0.7`
 - Number of BUSCO with confident placement for both haplotypes: **122**
 - Number of BUSCO with confident placement for either or both haplotypes: **700**
 - Phylogenetic placements on `122-BUSCO` tree (branch lengths):
-    - Haplotype one: sister to `decipiens_CCA1310` (0.004) ✅
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0040) ✅
     - Haplotype two: sister to `relicta_CCA5717` (0.0065) ✅
 - Phylogenetic placements on `700-BUSCO` tree (branch lengths):
     - Haplotype one: sister to `decipiens_CCA1310` (0.0052) ✅
     - Haplotype two: sister to `relicta_CCA5717` (0.0085) ✅
+
+### `min_alwr = 0.6`
+- Number of BUSCO with confident placement for both haplotypes: **149**
+- Number of BUSCO with confident placement for either or both haplotypes: **737**
+- Phylogenetic placements on `149-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0042) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0064) ✅
+- Phylogenetic placements on `737-BUSCO` tree (branch lengths):
+    - Haplotype one: *TBA*
+    - Haplotype two: *TBA*
+
+### `dir_backbone_genetrees` uses species tree topology
+- Number of BUSCO with confident placement for both haplotypes: **132**
+- Number of BUSCO with confident placement for either or both haplotypes: **795**
+- Phylogenetic placements on `132-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0039) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0067) ✅
+- Phylogenetic placements on `795-BUSCO` tree (branch lengths):
+    - Haplotype one: *TBA*
+    - Haplotype two: *TBA*
+
+---
+*Last update: 17 October 2026 by Jeremias Ivan*
