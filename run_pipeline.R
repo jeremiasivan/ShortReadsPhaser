@@ -150,8 +150,8 @@ render_params <- list(
 
   dir_hybpiper_query_output     = cfg$dir_hybpiper_query_output,
 
-  min_depth                     = as.integer(f_get_param(cfg$min_depth, 10)),
-  max_depth                     = as.integer(f_get_param(cfg$max_depth, 80)),
+  min_depth                     = as.numeric(f_get_param(cfg$min_depth, 10)),
+  max_depth                     = as.numeric(f_get_param(cfg$max_depth, 80)),
   min_coverage                  = as.numeric(f_get_param(cfg$min_coverage, 0.9)),
   min_identity                  = as.numeric(f_get_param(cfg$min_identity, 0.9)),
   taxonomy_rank                 = as.integer(f_get_param(cfg$taxonomy_rank, 1)),

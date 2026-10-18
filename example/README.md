@@ -1,5 +1,5 @@
 # Example on meelup-mallee short reads
-Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, that are hypothesised to be *E. decipiens* and *E. virginea*. Here, we tested different parameters and assessed if we could consistenly recover the two parental lineages across loci. 
+Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, which are hypothesised to be *E. decipiens* and *E. virginea*. Here, we tested different parameters and assessed if we could consistenly recover the two parental lineages across loci. 
 
 ## Table of Content
 - <a href="#01">Raw Data</a>
@@ -22,7 +22,7 @@ Each leaf sample has ~12x coverage (based on an average genome size of 500Mb), w
 Here, we combined the `MML` and `MMR` short reads using `cat` command in Unix, resulting in paired-end reads of ~60x coverage.
 
 ## <a id="02">Running CAPTUS</a>
-We ran <a href="https://doi.org/10.1093/sysbio/syag046">CAPTUS</a> on the paired-end reads to extract 1,187 BUSCO loci from <a href="https://doi.org/10.64898/2026.09.25.753384">Ivan et al. (2026)</a> with default parameters. We used the `-d` flag during `captus extract` to set the target loci as miscellaneous DNA markers because the BUSCO sequences do not follow the codon positions.
+We ran <a href="https://doi.org/10.1093/sysbio/syag046">CAPTUS</a> on the paired-end reads to extract 1,187 BUSCO loci from <a href="https://doi.org/10.64898/2026.09.25.753384">Ivan et al. (2026)</a> with default parameters. We used the `-d` flag during `captus extract` to set the target loci as miscellaneous DNA markers because the BUSCO sequences are not codons.
 
 In brief, CAPTUS starts by trimming the adaptors and cleaning the reads using BBTools. Then, it *de novo* assembles the reads using MEGAHIT, and extracts the target loci from the assembly using BLAT. This step generates two output files that are relevant to this pipeline:
 - `DNA_matches.fna`: individual hits of the target sequences
@@ -120,6 +120,30 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
     - Haplotype one: sister to `decipiens_CCA1310` (0.0055) ✅
     - Haplotype two: sister to `relicta_CCA5717` (0.0087) ✅
 
+### `min_consensus_thresh = 0.9`
+- Number of BUSCO with confident placement for both haplotypes: **105**
+- Number of BUSCO with confident placement for either or both haplotypes: **667**
+- Phylogenetic placements on `105-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0034) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0063) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0083)
+- Phylogenetic placements on `667-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0047) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0090) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0091)
+
+### `min_consensus_thresh = 0.8`
+- Number of BUSCO with confident placement for both haplotypes: **158**
+- Number of BUSCO with confident placement for either or both haplotypes: **702**
+- Phylogenetic placements on `158-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0033) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0065) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0079)
+- Phylogenetic placements on `702-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0050) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0090) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0090)   
+
 ### `dir_backbone_genetrees` uses species tree topology
 - Number of BUSCO with confident placement for both haplotypes: **132**
 - Number of BUSCO with confident placement for either or both haplotypes: **795**
@@ -129,6 +153,13 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
 - Phylogenetic placements on `795-BUSCO` tree (branch lengths):
     - Haplotype one: sister to `decipiens_CCA1310` (0.0057) ✅
     - Haplotype two: sister to `relicta_CCA5717` (0.0091) ✅
+
+### To Do
+- `min_consensus_thresh = 0.7`
+- `min_consensus_thresh = 0.6`
+- `min_consensus_thresh = 0.5`
+- 30x-coverage data; `min_depth = 7.5`; `max_depth = 75`
+- 120x-coverage data; `min_depth = 30`; `max_depth = 300`
 
 ---
 *Last update: 18 October 2026 by Jeremias Ivan*
