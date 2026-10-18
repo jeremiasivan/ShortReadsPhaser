@@ -19,7 +19,7 @@ Each leaf sample has ~12x coverage (based on an average genome size of 500Mb), w
 - `MML` and `MMR`
 - `MMS` and `MMT`
 
-Here, we combined the `MML` and `MMR` short reads using `cat` command in Unix, resulting in paired-end reads of ~60x coverage.
+Here, we combined the `MML` and `MMR` short reads using `cat` command in Unix. It should result in paired-end reads of ~60x coverage, but I forgot to include the replicates so my dataset only has ~30x coverage. I noticed this after running all analyses below, so the parameters I used might not be ideal...
 
 ## <a id="02">Running CAPTUS</a>
 We ran <a href="https://doi.org/10.1093/sysbio/syag046">CAPTUS</a> on the paired-end reads to extract 1,187 BUSCO loci from <a href="https://doi.org/10.64898/2026.09.25.753384">Ivan et al. (2026)</a> with default parameters. We used the `-d` flag during `captus extract` to set the target loci as miscellaneous DNA markers because the BUSCO sequences are not codons.
