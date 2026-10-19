@@ -5,6 +5,7 @@
 ## Table of Content
 - <a href="#prereqs">Prerequisites</a>
 - <a href="#genpipe">General Pipeline</a>
+- <a href="#example">Example</a>
 - <a href="#refs">References</a>
 
 ## <a id="prereqs">Prerequisites</a>
@@ -63,6 +64,9 @@ Short Reads Phaser requires a number of software and R packages to run. We recom
 
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `psmux`. 
 
+## <a id="example">Example</a>
+See <a href="./example/">example/</a> for example analysis on meelup mallee (*E. x phylacis*) short reads.
+
 ---
 ## <a id="refs">References</a>
 1. Borowiec, M.L. (<a href="https://doi.org/10.7717/peerj.1660">2016</a>). **AMAS: A fast tool for alignment manipulation and computing of summary statistics**. *PeerJ*, *4*, e1660.
@@ -100,4 +104,4 @@ Short Reads Phaser requires a number of software and R packages to run. We recom
 17. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 5.1 Fable was used to generate `config.yaml` and `run_pipeline.R`. 
 
 ---
-*Last update: 16 October 2026 by Jeremias Ivan*
+*Last update: 20 October 2026 by Jeremias Ivan*
