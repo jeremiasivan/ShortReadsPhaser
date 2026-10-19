@@ -186,7 +186,7 @@ Among 721 blocks, 117 blocks (across 114 BUSCO loci) have confident placement fo
 *<b>Figure 6.</b> Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 671 BUSCO. Dashed line represents x=y line.*
 
 ### Calculating the 'true' heterozygous sites called by WhatsHap
-We then calculated the heterozygous sites on the parental lineages that were called by WhatsHap. In this case, `phylacis_h0` is more closely-related to `relicta_CCA5717`, while `phylacis_h1` to `decipiens_CCA1310` (see <b><a href="#06">Results: Species Tree Inference</a></b>)
+We then calculated the 'true' heterozygous sites on the parental lineages that were called by WhatsHap. Here, we compared `phylacis_h0` to `relicta_CCA5717`, and `phylacis_h1` to `decipiens_CCA1310` (see <b><a href="#06">Results: Species Tree Inference</a></b>).
 
 ```
 library(ape)
@@ -234,7 +234,7 @@ out <- do.call(rbind, lapply(files, function(f) {
 }))
 ```
 
-Across 114 BUSCO loci, the proportion of correctly-called variants for `phylacis_h0` (in regards to `relicta_CCA5717`) ranges between 9.5% to 100% (average=73.86%; Fig. 7 (green)), while `phylacis_h1` (in regards to `decipiens_CCA1310`) has 16-100% correctly-called variants (average=84.76%; Fig. 7 (blue)). Considering both criteria results in a lower average of 59.52% (Fig. 7 (red)), with 0-14.81% (average=0.63%) variants swapped (i.e., `phylacis_h0` follows the `decipiens_CCA1310` alleles, and vice versa) across 114 loci. The results are also comparable when using the 671 BUSCO loci (Fig. 8), showing <b>a higher calling rate for the 'true' *E. decipiens*-specific alleles compared to those from *E. relicta*</b>. 
+Across 114 BUSCO loci, the proportion of correctly-called variants for `phylacis_h0` (in regards to `relicta_CCA5717`) ranges between 9.5% to 100% (average=73.9%; Fig. 7 (green)), while `phylacis_h1` (in regards to `decipiens_CCA1310`) has 16.1-100% correctly-called variants (average=84.8%; Fig. 7 (blue)). Considering both criteria results in a lower average of 59.5% (Fig. 7 (red)), with 0-14.8% (average=0.63%) variants swapped (i.e., `phylacis_h0` follows the `decipiens_CCA1310` alleles, and vice versa) across 114 loci. The results are also comparable when using the 671 BUSCO loci (Fig. 8), showing <b>a higher calling rate for the 'true' *E. decipiens*-specific alleles compared to those from *E. relicta*</b>.
 
 ![Figure 7. Proportion of correctly-called variants across 114 BUSCO.](./figures/fig7.png)
 *<b>Figure 7.</b> Proportion of correctly-called variants across 114 BUSCO. Colours denote different criterion used.*
