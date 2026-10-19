@@ -6,9 +6,10 @@ Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, wh
 - <a href="#02">Running CAPTUS</a>
 - <a href="#03">Running ShortReadsPhaser</a>
 - <a href="#04">Results: Mapping</a>
-- <a href="#05">Results: Species Tree Inference</a>
-    - <a href="#05a">60x-coverage data</a>
-    - <a href="#05b">30x-coverage data</a>
+- <a href="#05">Results: Phasing</a>
+- <a href="#06">Results: Species Tree Inference</a>
+    - <a href="#06a">60x-coverage data</a>
+    - <a href="#06b">30x-coverage data</a>
 
 ## <a id="01">Raw Data</a>
 The raw short-read data are located at `/home/raw_data/MM/2018_short_reads/`. Each sample is labelled as `MMAA`, `MMAB`, `MMAC`, `MMBA`, etc., where:
@@ -68,45 +69,7 @@ min_alwr <- 0.8
 min_consensus_thresh <- 1.0
 ```
 
-## <a id="05">Results: Mapping</a>
-
-### Calculating expected pairwise genetic distance between *E. decipiens* and *E. relicta*
-First, we calculated the pairwise genetic distance between `decipiens_CCA1310` (i.e., a representative sample of *E. decipiens*) and `relicta_CCA5717` (i.e., a closely-related species with *E. virginea*) using the BUSCO alignments from Ivan et al. (2026):
-```
-library(ape)
-
-files  <- list.files("/home/jeremias/captus/busco_alignments", full.names=TRUE)
-ls_ref <- c("decipiens_CCA1310", "relicta_CCA5717")
-
-# iterate over BUSCO loci
-res <- do.call(rbind, lapply(files, function(f) {
-  # open the BUSCO alignment
-  aln <- read.dna(f, format="fasta", as.character=TRUE)
-  if (!all(ls_ref %in% rownames(aln))) {
-    return(NULL)
-  }
-
-  # extract the two reference samples
-  m <- aln[ls_ref, , drop=FALSE]
-  m <- tolower(m)
-
-  # count the number of sites with no missing data
-  ok <- colSums(matrix(m %in% c("a", "c", "g", "t"), nrow=2)) == 2
-
-  # return the number of sites per locus
-  data.frame(locus = basename(f),
-             diffs = sum(m[1, ok] != m[2, ok]),
-             sites = sum(ok))
-}))
-
-# calculate the pairwise genetic distance per locus
-res$p <- res$diffs / res$sites
-```
-
-Across 1,186 BUSCO where *both* were found, the average pairwise genetic distance between the two samples is 1.5% (SD=0.7%; Fig.1). This means that there is on average **one heterozygous site every ~70 bp**.
-
-![Figure 1. Distribution of pairwise genetic distance between decipiens_CCA1310 and relicta_CCA5717 across 1,186 BUSCO loci.](./figures/fig2.png)
-*<b>Figure 1.</b> Distribution of pairwise genetic distance between `decipiens_CCA1310` and `relicta_CCA5717` across 1,186 BUSCO loci. Vertical red line denotes the average across loci.*
+## <a id="04">Results: Mapping</a>
 
 ### Mapping 60x-coverage data to the 1,187 CAPTUS best hits
 After running CAPTUS on the 60x-coverage data, we mapped the cleaned short reads to the 1,187 CAPTUS best hits. We then assessed the mapping statistics as follows:
@@ -152,25 +115,57 @@ $ samtools flagstat phylacis.dedup.bam
   329849 + 0 with mate mapped to a different chr (mapQ>=5)
 ```
 
-GenomeScope2 estimated the genome size of meelup mallee to be roughly <a href="https://github.com/roblanf/MM_genome">530Mb</a> based on long sequencing reads, which means that the total length of the 1,187 BUSCO loci (~6.1Mb) accounts for ~1.2% of the genome. After deduplication, the retained reads represent ~2.8% of the total reads, which is ~2.3x higher than the expectation. In other words, the filtered BAM has roughly half off‑target reads (i.e., reads that do not come from the BUSCO loci). 
+GenomeScope2 estimated the genome size of meelup mallee to be roughly <a href="https://github.com/roblanf/MM_genome">530Mb</a> based on long sequencing reads, which means that the total length of the 1,187 BUSCO loci (~6.1Mb) accounts for **~1.2% of the genome**. After deduplication, the retained reads represent ~2.8% of the total reads, which is ~2.3x higher than expectation. In other words, the filtered BAM has over half off‑target reads (i.e., reads that do not come from the BUSCO loci). 
 
-We then calculated the per-locus average mapping depth to assess if the extra mapped reads are localised or spread evenly across all loci. To do this, we first calculated the mapping depth for each CDS block using `samtools depth -a phylacis.dedup.bam`. Note that a single locus may contain multiple CDS blocks. The median mapping depth across all blocks is 62x, but the average is 105.89x, which reflects that the off-target reads are concentrated in a minority of positions. If we calculated the per-locus average mapping depth across all CDS blocks, there are 133 BUSCO loci with >=150 average depth (Fig. 2).
+We then calculated the per-locus average mapping depth to assess if the extra mapped reads are localised or spread evenly across all loci. To do this, we first calculated the mapping depth of each CDS block using `samtools depth -a phylacis.dedup.bam`. Note that a single locus may contain multiple CDS blocks. The median mapping depth across all blocks is 62x, but the average is 105.89x, which reflects that the off-target reads are concentrated in a minority of positions. If we calculated the per-locus average mapping depth across all CDS blocks, there are 133 BUSCO loci with >=150 average depth (Fig. 1).
 
-![Figure 2. Per-locus average mapping depth of the meelup mallee short-read data.](./figures/fig1.png)
-*<b>Figure 2.</b> Per-locus average mapping depth of the meelup mallee short-read data. Vertical red dashed lines denote the minimum and maximum depths during variant calling.*
+![Figure 1. Per-locus average mapping depth of the meelup mallee short-read data.](./figures/fig1.png)
+*<b>Figure 1.</b> Per-locus average mapping depth of the meelup mallee short-read data. Vertical red dashed lines denote the minimum and maximum depths during variant calling.*
 
-## <a id="05">Results: Species Tree Inference</a>
+## <a id="05">Results: Phasing</a>
 
-### <a id="05a">60x-coverage data</a>
-We first retrieved all CDS blocks across the 1,187 BUSCO loci, and filtered out four loci with all Ns after remapping (including `167757at71240` with no haplotype recovered):
+### Calculating pairwise genetic distance between *E. decipiens* and *E. relicta*
+First, we calculated the pairwise genetic distance between `decipiens_CCA1310` (i.e., a representative sample of *E. decipiens*) and `relicta_CCA5717` (i.e., a closely-related species with *E. virginea*) using the BUSCO alignments from Ivan et al. (2026):
+```
+library(ape)
 
-| Step         | #BUSCO | #Blocks |
-| ------------ | -----: | ------: |
-| Initial      | 1,187  | 4,713   |
-| Filtered out | 4      | 7       |  
-| Passed       | 1,183  | 4,676   |
+files  <- list.files("/home/jeremias/captus/busco_alignments", full.names=TRUE)
+ls_ref <- c("decipiens_CCA1310", "relicta_CCA5717")
 
-After running EPA-NG, we found that the most common parental lineages recovered from the gene trees are `Curviptera` and `Falcatae`. Across the 4,676 blocks, there were 3,205 blocks unresolved at series-level (`taxonomic_rank==3`), while the rest (1,471 blocks) can be categorised as:
+# iterate over BUSCO loci
+res <- do.call(rbind, lapply(files, function(f) {
+  # open the BUSCO alignment
+  aln <- read.dna(f, format="fasta", as.character=TRUE)
+  if (!all(ls_ref %in% rownames(aln))) {
+    return(NULL)
+  }
+
+  # extract the two reference samples
+  m <- aln[ls_ref, , drop=FALSE]
+  m <- tolower(m)
+
+  # count the number of sites with no missing data
+  ok <- colSums(matrix(m %in% c("a", "c", "g", "t"), nrow=2)) == 2
+
+  # return the number of sites per locus
+  data.frame(locus = basename(f),
+             diffs = sum(m[1, ok] != m[2, ok]),
+             sites = sum(ok))
+}))
+
+# calculate the pairwise genetic distance per locus
+res$p <- res$diffs / res$sites
+```
+
+Across 1,186 BUSCO where *both* were found, the average pairwise genetic distance between the two samples is 1.5% (SD=0.7%; Fig.2). This means that there is on average **one heterozygous site every ~70 bp**.
+
+![Figure 2. Distribution of pairwise genetic distance between decipiens_CCA1310 and relicta_CCA5717 across 1,186 BUSCO loci.](./figures/fig2.png)
+*<b>Figure 2.</b> Distribution of pairwise genetic distance between `decipiens_CCA1310` and `relicta_CCA5717` across 1,186 BUSCO loci. Vertical red line denotes the average across loci.*
+
+### Calculating the proportion of called variants
+Across 1,187 BUSCO loci (4,713 CDS blocks), we excluded four BUSCO loci (7 CDS blocks) with no recovered haplotypes. We then ran EPA-NG on individual blocks, and found that the most common parental lineages recovered are `Curviptera` and `Falcatae` (which represent the series of *E. virginea* and *E. decipiens*, respectively).
+
+Across the 4,676 blocks, there were 3,205 blocks unresolved at series-level (`taxonomic_rank==3`), while the rest (1,471 blocks) can be categorised as:
 
 | Criterion                                       | #Blocks |
 | ----------------------------------------------- | ------: |
@@ -178,11 +173,17 @@ After running EPA-NG, we found that the most common parental lineages recovered 
 | Both haplotypes have alwr < min_alwr            | 743     | 
 | Both haplotypes have the same lineages          | 7       |
 
-Among 721 blocks, 117 blocks (across 114 BUSCO loci) have confident placement for both haplotypes. Thus, we inferred concatenated species trees using two sets of loci:
-- **114 BUSCO** with confident placement for both haplotypes
-- **671 BUSCO** with confident placement for either or both haplotypes
+Among 721 blocks, 117 blocks (across 114 BUSCO loci) have confident placement for both haplotypes. Following the previous steps, we calculated the pairwise genetic distance between the two haplotypes across 114 loci, and compared its distribution with the two parental lineages (Figs. 3-4).
 
-Both sets resulted in identical placement of the two haplotypes: one as sister to `decipiens_CCA1310` and the other as sister to `relicta_CCA5717`, while the unphased haplotype becomes the sister to `relicta_CCA5717` with a slightly longer branch length.
+![Figure 3. Distribution of pairwise genetic distances of the two meelup mallee haplotypes and one of the two parental lineages across 114 BUSCO.](./figures/fig3.png)
+*<b>Figure 3.</b> Distribution of pairwise genetic distances of the two meelup mallee haplotypes and one of the two parental lineages across 114 BUSCO.*
+
+![Figure 4. Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 114 BUSCO.](./figures/fig4.png)
+*<b>Figure 4.</b> Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 114 BUSCO. Dashed line represents x=y line.*
+
+## <a id="06">Results: Species Tree Inference</a>
+- Number of BUSCO with confident placement for both haplotypes: **114**
+- Number of BUSCO with confident placement for either or both haplotypes: **671**
 - Phylogenetic placements on `114-BUSCO` tree (branch lengths):
     - Haplotype one: sister to `decipiens_CCA1310` (0.0036)
     - Haplotype two: sister to `relicta_CCA5717` (0.0064)
@@ -191,19 +192,6 @@ Both sets resulted in identical placement of the two haplotypes: one as sister t
     - Haplotype one: sister to `decipiens_CCA1310` (0.0044)
     - Haplotype two: sister to `relicta_CCA5717` (0.0084)
     - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0090)
-
-### <a id="05b">30x-coverage data</a>
-We did the same analyses on the dataset with ~30x coverage, and recovered similar results:
-- Number of BUSCO with confident placement for both haplotypes: **107**
-- Number of BUSCO with confident placement for either or both haplotypes: **675**
-- Phylogenetic placements on `107-BUSCO` tree (branch lengths):
-    - Haplotype one: sister to `decipiens_CCA1310` (0.0034)
-    - Haplotype two: sister to `relicta_CCA5717` (0.0065)
-    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0084)
-- Phylogenetic placements on `675-BUSCO` tree (branch lengths):
-    - Haplotype one: sister to `decipiens_CCA1310` (0.0046)
-    - Haplotype two: sister to `relicta_CCA5717` (0.0086)
-    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0092)
 
 ---
 *Last update: 19 October 2026 by Jeremias Ivan*
