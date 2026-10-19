@@ -5,9 +5,10 @@ Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, wh
 - <a href="#01">Raw Data</a>
 - <a href="#02">Running CAPTUS</a>
 - <a href="#03">Running ShortReadsPhaser</a>
-- <a href="#04">Results</a>
-    - <a href="#04a">60x-coverage data</a>
-    - <a href="#04b">30x-coverage data</a>
+- <a href="#04">Results: Mapping</a>
+- <a href="#05">Results: Species Tree Inference</a>
+    - <a href="#05a">60x-coverage data</a>
+    - <a href="#05b">30x-coverage data</a>
 
 ## <a id="01">Raw Data</a>
 The raw short-read data are located at `/home/raw_data/MM/2018_short_reads/`. Each sample is labelled as `MMAA`, `MMAB`, `MMAC`, `MMBA`, etc., where:
@@ -67,7 +68,9 @@ min_alwr <- 0.8
 min_consensus_thresh <- 1.0
 ```
 
-## <a id="04">Results: Phasing</a>
+## <a id="05">Results: Mapping</a>
+
+### Calculating expected pairwise genetic distance between *E. decipiens* and *E. relicta*
 First, we calculated the pairwise genetic distance between `decipiens_CCA1310` (i.e., a representative sample of *E. decipiens*) and `relicta_CCA5717` (i.e., a closely-related species with *E. virginea*) using the BUSCO alignments from Ivan et al. (2026):
 ```
 library(ape)
@@ -102,8 +105,59 @@ res$p <- res$diffs / res$sites
 
 Across 1,186 BUSCO where *both* were found, the average pairwise genetic distance between the two samples is 1.5% (SD=0.7%; Fig.1). This means that there is on average **one heterozygous site every ~70 bp**.
 
-![Figure 1. Distribution of pairwise genetic distance between decipiens_CCA1310 and relicta_CCA5717 across 1,186 BUSCO loci.](./figures/fig1.png)
+![Figure 1. Distribution of pairwise genetic distance between decipiens_CCA1310 and relicta_CCA5717 across 1,186 BUSCO loci.](./figures/fig2.png)
 *<b>Figure 1.</b> Distribution of pairwise genetic distance between `decipiens_CCA1310` and `relicta_CCA5717` across 1,186 BUSCO loci. Vertical red line denotes the average across loci.*
+
+### Mapping 60x-coverage data to the 1,187 CAPTUS best hits
+After running CAPTUS on the 60x-coverage data, we mapped the cleaned short reads to the 1,187 CAPTUS best hits. We then assessed the mapping statistics as follows:
+
+```
+$ samtools idxstats phylacis.dedup.bam | awk '{T+=$2} END {print T}'
+  6160664
+
+$ samtools flagstat phylacis.sorted.bam
+  249346330 + 0 in total (QC-passed reads + QC-failed reads)
+  249094936 + 0 primary
+  0 + 0 secondary
+  251394 + 0 supplementary
+  0 + 0 duplicates
+  0 + 0 primary duplicates
+  13305405 + 0 mapped (5.34% : N/A)
+  13054011 + 0 primary mapped (5.24% : N/A)
+  249094936 + 0 paired in sequencing
+  124547468 + 0 read1
+  124547468 + 0 read2
+  8029416 + 0 properly paired (3.22% : N/A)
+  8627550 + 0 with itself and mate mapped
+  4426461 + 0 singletons (1.78% : N/A)
+  571410 + 0 with mate mapped to a different chr
+  446208 + 0 with mate mapped to a different chr (mapQ>=5)
+
+$ samtools flagstat phylacis.dedup.bam
+  6895181 + 0 in total (QC-passed reads + QC-failed reads)
+  6895181 + 0 primary
+  0 + 0 secondary
+  0 + 0 supplementary
+  0 + 0 duplicates
+  0 + 0 primary duplicates
+  6895181 + 0 mapped (100.00% : N/A)
+  6895181 + 0 primary mapped (100.00% : N/A)
+  6895181 + 0 paired in sequencing
+  3457041 + 0 read1
+  3438140 + 0 read2
+  6382983 + 0 properly paired (92.57% : N/A)
+  6733591 + 0 with itself and mate mapped
+  161590 + 0 singletons (2.34% : N/A)
+  329849 + 0 with mate mapped to a different chr
+  329849 + 0 with mate mapped to a different chr (mapQ>=5)
+```
+
+GenomeScope2 estimated the genome size of meelup mallee to be roughly <a href="https://github.com/roblanf/MM_genome">530Mb</a> based on long sequencing reads, which means that the total length of the 1,187 BUSCO loci (~6.1Mb) accounts for ~1.2% of the genome. After deduplication, the retained reads represent ~2.8% of the total reads, which is ~2.3x higher than the expectation. In other words, the filtered BAM has roughly half off‑target reads (i.e., reads that do not come from the BUSCO loci). 
+
+We then calculated the per-locus average mapping depth to assess if the extra mapped reads are localised or spread evenly across all loci. To do this, we first calculated the mapping depth for each CDS block using `samtools depth -a phylacis.dedup.bam`. Note that a single locus may contain multiple CDS blocks. The median mapping depth across all blocks is 62x, but the average is 105.89x, which reflects that the off-target reads are concentrated in a minority of positions. If we calculated the per-locus average mapping depth across all CDS blocks, there are 133 BUSCO loci with >=150 average depth (Fig. 2).
+
+![Figure 2. Per-locus average mapping depth of the meelup mallee short-read data.](./figures/fig1.png)
+*<b>Figure 2.</b> Per-locus average mapping depth of the meelup mallee short-read data. Vertical red dashed lines denote the minimum and maximum depths during variant calling.*
 
 ## <a id="05">Results: Species Tree Inference</a>
 
