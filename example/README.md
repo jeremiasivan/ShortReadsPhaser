@@ -8,8 +8,6 @@ Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, wh
 - <a href="#04">Results: Mapping</a>
 - <a href="#05">Results: Phasing</a>
 - <a href="#06">Results: Species Tree Inference</a>
-    - <a href="#06a">60x-coverage data</a>
-    - <a href="#06b">30x-coverage data</a>
 
 ## <a id="01">Raw Data</a>
 The raw short-read data are located at `/home/raw_data/MM/2018_short_reads/`. Each sample is labelled as `MMAA`, `MMAB`, `MMAC`, `MMBA`, etc., where:
@@ -120,7 +118,7 @@ GenomeScope2 estimated the genome size of meelup mallee to be roughly <a href="h
 We then calculated the per-locus average mapping depth to assess if the extra mapped reads are localised or spread evenly across all loci. To do this, we first calculated the mapping depth of each CDS block using `samtools depth -a phylacis.dedup.bam`. Note that a single locus may contain multiple CDS blocks. The median mapping depth across all blocks is 62x, but the average is 105.89x, which reflects that the off-target reads are concentrated in a minority of positions. If we calculated the per-locus average mapping depth across all CDS blocks, there are 133 BUSCO loci with >=150 average depth (Fig. 1).
 
 ![Figure 1. Per-locus average mapping depth of the meelup mallee short-read data.](./figures/fig1.png)
-*<b>Figure 1.</b> Per-locus average mapping depth of the meelup mallee short-read data. Vertical red dashed lines denote the minimum and maximum depths during variant calling.*
+*<b>Figure 1.</b> Per-locus average mapping depth of the meelup mallee short-read data. Vertical red dashed lines denote the minimum and maximum depths during variant calling. Number of bins = 100.*
 
 ## <a id="05">Results: Phasing</a>
 
@@ -133,7 +131,7 @@ files  <- list.files("/home/jeremias/captus/busco_alignments", full.names=TRUE)
 ls_ref <- c("decipiens_CCA1310", "relicta_CCA5717")
 
 # iterate over BUSCO loci
-res <- do.call(rbind, lapply(files, function(f) {
+out <- do.call(rbind, lapply(files, function(f) {
   # open the BUSCO alignment
   aln <- read.dna(f, format="fasta", as.character=TRUE)
   if (!all(ls_ref %in% rownames(aln))) {
@@ -154,15 +152,15 @@ res <- do.call(rbind, lapply(files, function(f) {
 }))
 
 # calculate the pairwise genetic distance per locus
-res$p <- res$diffs / res$sites
+out$p <- out$diffs / out$sites
 ```
 
 Across 1,186 BUSCO where *both* were found, the average pairwise genetic distance between the two samples is 1.5% (SD=0.7%; Fig.2). This means that there is on average **one heterozygous site every ~70 bp**.
 
 ![Figure 2. Distribution of pairwise genetic distance between decipiens_CCA1310 and relicta_CCA5717 across 1,186 BUSCO loci.](./figures/fig2.png)
-*<b>Figure 2.</b> Distribution of pairwise genetic distance between `decipiens_CCA1310` and `relicta_CCA5717` across 1,186 BUSCO loci. Vertical red line denotes the average across loci.*
+*<b>Figure 2.</b> Distribution of pairwise genetic distance between `decipiens_CCA1310` and `relicta_CCA5717` across 1,186 BUSCO loci. Vertical red line denotes the average across loci. Number of bins = 100.*
 
-### Calculating the proportion of called variants
+### Calculating the pairwise genetic distance between the meelup mallee haplotypes
 Across 1,187 BUSCO loci (4,713 CDS blocks), we excluded four BUSCO loci (7 CDS blocks) with no recovered haplotypes. We then ran EPA-NG on individual blocks, and found that the most common parental lineages recovered are `Curviptera` and `Falcatae` (which represent the series of *E. virginea* and *E. decipiens*, respectively).
 
 Across the 4,676 blocks, there were 3,205 blocks unresolved at series-level (`taxonomic_rank==3`), while the rest (1,471 blocks) can be categorised as:
@@ -173,7 +171,7 @@ Across the 4,676 blocks, there were 3,205 blocks unresolved at series-level (`ta
 | Both haplotypes have alwr < min_alwr            | 743     | 
 | Both haplotypes have the same lineages          | 7       |
 
-Among 721 blocks, 117 blocks (across 114 BUSCO loci) have confident placement for both haplotypes. Following the previous steps, we calculated the pairwise genetic distance between the two haplotypes across 114 loci, and compared its distribution with the two parental lineages (Figs. 3-4).
+Among 721 blocks, 117 blocks (across 114 BUSCO loci) have confident placement for both haplotypes. Following the previous steps, we calculated the pairwise genetic distance between the two haplotypes on each locus, and compared its distribution with the two putative parental lineages across 114 loci (Figs. 3-4). The two distributions are significantly correlated, with R<sup>2</sup> = 0.324 (<i>p</i> < 0.001). The results are also comparable when using the 671 BUSCO loci (Figs. 5-6).
 
 ![Figure 3. Distribution of pairwise genetic distances of the two meelup mallee haplotypes and one of the two parental lineages across 114 BUSCO.](./figures/fig3.png)
 *<b>Figure 3.</b> Distribution of pairwise genetic distances of the two meelup mallee haplotypes and one of the two parental lineages across 114 BUSCO.*
@@ -181,9 +179,75 @@ Among 721 blocks, 117 blocks (across 114 BUSCO loci) have confident placement fo
 ![Figure 4. Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 114 BUSCO.](./figures/fig4.png)
 *<b>Figure 4.</b> Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 114 BUSCO. Dashed line represents x=y line.*
 
+![Figure 5. Distribution of pairwise genetic distances of the two meelup mallee haplotypes and one of the two parental lineages across 671 BUSCO.](./figures/fig5.png)
+*<b>Figure 5.</b> Distribution of pairwise genetic distances of the two meelup mallee haplotypes and one of the two parental lineages across 671 BUSCO.*
+
+![Figure 6. Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 671 BUSCO.](./figures/fig6.png)
+*<b>Figure 6.</b> Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 671 BUSCO. Dashed line represents x=y line.*
+
+### Calculating the 'true' heterozygous sites called by WhatsHap
+We then calculated the heterozygous sites on the parental lineages that were called by WhatsHap. In this case, `phylacis_h0` is more closely-related to `relicta_CCA5717`, while `phylacis_h1` to `decipiens_CCA1310` (see <b><a href="#06">Results: Species Tree Inference</a></b>)
+
+```
+library(ape)
+
+# extract the list of locus
+files  <- list.files("/home/jeremias/captus/busco_alignments", full.names=TRUE)
+
+# set up variables
+bases <- c("a", "c", "g", "t")
+ids   <- c("phylacis_0", "phylacis_1", "relicta_CCA5717", "decipiens_CCA1310")
+
+# create a function to count the number of heterozygous sites
+tally <- function(aln, h0, h1, A, B) {
+  # convert all bases to lowercases
+  m   <- tolower(aln[c(h0, h1, A, B), , drop=FALSE])
+
+  # extract all sites with valid sites across all four sequences
+  m   <- m[, colSums(matrix(m %in% bases, nrow = 4)) == 4, drop=FALSE]
+
+  # extract all heterozygous sites between the parental lineages
+  m   <- m[, m[1, ] != m[2, ], drop=FALSE]
+
+  # count the number of consistent (con) and swapped (swp) alleles
+  con <- m[1, ] == m[3, ] & m[2, ] == m[4, ]
+  swp <- m[1, ] == m[4, ] & m[2, ] == m[3, ]
+
+  # return the count of heterozygous sites
+  c(het        = ncol(m),
+    h0_rel     = sum(m[1, ] == m[3, ]),
+    h1_dec     = sum(m[2, ] == m[4, ]),
+    consistent = sum(con),
+    swapped    = sum(swp))
+}
+
+# count the number of heterozygous sites per locus
+out <- do.call(rbind, lapply(files, function(f) {
+  # open the BUSCO alignment
+  aln <- read.dna(f, format="fasta", as.character=TRUE)
+  if (!all(ids %in% rownames(aln))) {
+    return(NULL)
+  }
+
+  # return the number of heterozygous sites per locus
+  data.frame(locus = basename(f), t(tally(aln, ids[1], ids[2], ids[3], ids[4])))
+}))
+```
+
+Across 114 BUSCO loci, the proportion of correctly-called variants for `phylacis_h0` (in regards to `relicta_CCA5717`) ranges between 9.5% to 100% (average=73.86%; Fig. 7 (green)), while `phylacis_h1` (in regards to `decipiens_CCA1310`) has 16-100% correctly-called variants (average=84.76%; Fig. 7 (blue)). Considering both criteria results in a lower average of 59.52% (Fig. 7 (red)), with 0-14.81% (average=0.63%) variants swapped (i.e., `phylacis_h0` follows the `decipiens_CCA1310` alleles, and vice versa) across 114 loci. The results are also comparable when using the 671 BUSCO loci (Fig. 8), showing <b>a higher calling rate for the 'true' *E. decipiens*-specific alleles compared to those from *E. relicta*</b>. 
+
+![Figure 7. Proportion of correctly-called variants across 114 BUSCO.](./figures/fig7.png)
+*<b>Figure 7.</b> Proportion of correctly-called variants across 114 BUSCO. Colours denote different criterion used.*
+
+![Figure 8. Proportion of correctly-called variants across 671 BUSCO.](./figures/fig8.png)
+*<b>Figure 8.</b> Proportion of correctly-called variants across 671 BUSCO. Colours denote different criterion used.*
+
 ## <a id="06">Results: Species Tree Inference</a>
-- Number of BUSCO with confident placement for both haplotypes: **114**
-- Number of BUSCO with confident placement for either or both haplotypes: **671**
+We inferred concatenated species trees using two sets of BUSCO loci: 114 BUSCO with confident placement for both haplotypes, and 671 BUSCO loci with confident placement for both *or* either haplotype. Figure 9 shows the placement of each haplotype on the concatenated tree subsetted from the full 704-tip tree (701 samples from Ivan et al. (2026) + 1 unphased meelup mallee haplotype + 2 phased meelup mallee haplotypes). <b>The unphased `phylacis_captus` and the phased `phylacis_h0` are closely-related to `relicta_CCA5717`, while `phylacis_h1` is more closely-related to `decipiens_CCA1310`</b>.
+
+![Figure 9. Subsetted concatenated phylogenetic tree inferred from 114 BUSCO loci.](./figures/fig9.png)
+*<b>Figure 9.</b> Subsetted concatenated phylogenetic tree inferred from 114 BUSCO loci. The tree is rooted at `raveretiana_CCA1669` from distantly-related sect.* Domesticae. *Colours denote the two meelup mallee haplotypes (blue) and unphased haplotype (red).*
+
 - Phylogenetic placements on `114-BUSCO` tree (branch lengths):
     - Haplotype one: sister to `decipiens_CCA1310` (0.0036)
     - Haplotype two: sister to `relicta_CCA5717` (0.0064)
