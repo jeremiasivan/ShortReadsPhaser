@@ -51,7 +51,8 @@ In `ShortReadsPhaser` pipeline, there are several free parameters to be set by u
 dir_backbone_genetrees <- "/home/jeremias/captus/701_sample/tree_treefile/"
 
 # use the CAPTUS output
-tool <- "captus"
+extraction_tool <- "captus"
+phasing_tool    <- "whatshap"
 
 # set the minimum and maximum depths to call a variant
 min_depth <- 15     # for 60x-coverage data, and 7.5 for 30x-coverage data

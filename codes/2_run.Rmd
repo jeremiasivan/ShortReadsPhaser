@@ -118,7 +118,7 @@ fn_phased_vcf      <- file.path(outdir_variant_calls, paste0(params$sample, ".ph
 fn_phased_vcf_gz   <- file.path(outdir_variant_calls, paste0(params$sample, ".phased.vcf.gz"))
 fn_blocks          <- file.path(outdir_variant_calls, "blocks_phasing.tsv")
 if (!all(file.exists(fn_blocks, fn_phased_vcf_gz)) || params$redo) {
-    if (tolower(params$phasing_tool)=="captus") {
+    if (tolower(params$phasing_tool)=="whatshap") {
         f_whatshap(fn_target_loci     = fn_target_loci_flanked,
                    fn_vcf_gz_filtered = fn_filtered_vcf_gz,
                    fn_bam             = fn_bam_dedup,
@@ -130,7 +130,7 @@ if (!all(file.exists(fn_blocks, fn_phased_vcf_gz)) || params$redo) {
         f_hapcut2(fn_bam            = fn_bam_dedup,
                   fn_vcf            = fn_filtered_vcf_gz,
                   fn_fragment_out   = file.path(outdir_variant_calls, paste0(params$sample, ".fragment.txt")),
-                  prefix            = params$sample,
+                  prefix            = file.path(outdir_variant_calls, params$sample),
                   fn_blocks_hapcut  = fn_blocks,
                   exe_extracthairs  = params$exe_extracthairs,
                   exe_hapcut2       = params$exe_hapcut2) 

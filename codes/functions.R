@@ -138,7 +138,7 @@ f_hapcut2_block_list <- function(fn_hapcut2_blocks, fn_out) {
         }
 
         # summarise the block
-        ls_blocks[[i]] <- data.table::data.table(sample   = sample,
+        ls_blocks[[i]] <- data.table::data.table(sample   = "sample1",
                                                  locus    = block$locus[1],
                                                  PS       = min(block$pos),
                                                  from     = min(block$pos),
@@ -157,7 +157,7 @@ f_hapcut2_block_list <- function(fn_hapcut2_blocks, fn_out) {
 f_hapcut2 <- function(fn_bam, fn_vcf, fn_fragment_out, prefix, fn_blocks_hapcut, exe_extracthairs, exe_hapcut2) {
     # uncompressed the VCF file if it is compressed
     if (grepl("\\.gz$", fn_vcf)) {
-        system(paste("gunzip -k", fn_vcf))
+        system(paste("gunzip -kf", fn_vcf))
         fn_vcf <- gsub("\\.gz$", "", fn_vcf)
     }
     
@@ -172,7 +172,8 @@ f_hapcut2 <- function(fn_bam, fn_vcf, fn_fragment_out, prefix, fn_blocks_hapcut,
     cmd_hapcut2 <- paste(exe_hapcut2,
                          "--fragments", fn_fragment_out,
                          "--VCF", fn_vcf,
-                         "--output", prefix)
+                         "--output", prefix,
+                         "--outvcf 1")
     system(cmd_hapcut2)
 
     # rename files

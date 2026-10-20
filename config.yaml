@@ -35,8 +35,8 @@ file_backbone_speciestree:     ""         # backbone species tree in Newick form
 # --- Query (new sample) --------------------------------------
 sample:                     ""            # sample name
 dir_fastq_gz:               ""            # directory of the paired-end reads (must be named <sample>_R1.fastq.gz and <sample>_R2.fastq.gz)
-extraction_tool:            "captus"      # tool to generate the query matches (options: "captus" or "hybpiper"; default: "captus")
-phasing_tool:               "whatshap"    # tool to phase the query matches (options: "whatshap" or "hapcut2"; default: "whatshap")
+extraction_tool:            "captus"      # tool to generate the query matches (options: "captus" or "hybpiper")
+phasing_tool:               "whatshap"    # tool to phase the query matches (options: "whatshap" or "hapcut2")
 
 # for CAPTUS (tool: "captus")
 file_query_matches_flanked: ""            # CAPTUS flanked matches of the sample (e.g., DNA_matches_flanked.fna)
