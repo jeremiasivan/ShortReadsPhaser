@@ -1,6 +1,6 @@
 # ShortReadsPhaser
 
-**Short Reads Phaser** is an R pipeline to phase individual loci using short-read data. It requires CAPTUS output from the new sample, as well as backbone locus alignments and trees as reference. It is mainly developed and tested using Linux, so there might be incompatibilities using MacOS and Windows.
+**Short Reads Phaser** is an R pipeline to phase individual loci using short-read data. It requires CAPTUS or HybPiper output from the new sample, as well as backbone locus alignments and trees as reference. It is mainly developed and tested using Linux, so there might be incompatibilities using MacOS and Windows.
 
 ## Table of Content
 - <a href="#prereqs">Prerequisites</a>
@@ -19,6 +19,7 @@ Short Reads Phaser requires a number of software and R packages to run. We recom
 | BWA            | <a href="https://github.com/lh3/BWA">Link</a>                    | <a href="https://anaconda.org/bioconda/bwa">Link</a>             |
 | EPA-NG         | <a href="https://github.com/pierrebarbera/epa-ng">Link</a>       | <a href="https://anaconda.org/bioconda/epa-ng">Link</a>          |
 | Gappa          | <a href="https://github.com/lczech/gappa">Link</a>               | <a href="https://anaconda.org/bioconda/gappa">Link</a>           |
+| HapCUT2        | <a href="https://github.com/vibansal/HapCUT2">Link</a>           | <a href="https://anaconda.org/bioconda/hapcut2">Link</a>         |
 | IQ-TREE        | <a href="http://www.iqtree.org">Link</a>                         | <a href="https://anaconda.org/bioconda/iqtree">Link</a>          |
 | MAFFT          | <a href="https://github.com/GSLBiotech/mafft">Link</a>           | <a href="https://anaconda.org/bioconda/mafft">Link</a>           |
 | SAMtools       | <a href="https://github.com/samtools/samtools">Link</a>          | <a href="https://anaconda.org/bioconda/samtools">Link</a>        |
@@ -50,7 +51,7 @@ Short Reads Phaser requires a number of software and R packages to run. We recom
         ```
     - Installing prerequisites
         ```
-        conda install -c conda-forge -c bioconda r-data.table r-doSNOW r-log4r r-optparse r-rmarkdown r-tidyverse r-yaml bioconductor-biostrings amas bcftools bwa epa-ng gappa iqtree mafft samtools whatshap 
+        conda install -c conda-forge -c bioconda r-data.table r-doSNOW r-log4r r-optparse r-rmarkdown r-tidyverse r-yaml bioconductor-biostrings amas bcftools bwa epa-ng gappa hapcut2 iqtree mafft samtools whatshap 
         ```
 
 3. **Update the parameters in `config.yaml`** <br>
@@ -79,29 +80,31 @@ See <a href="./example/">example/</a> for example analysis on meelup mallee (*E.
 
 5. Czech, L., et al. (<a href="https://doi.org/10.1093/bioinformatics/btaa070">2020</a>). **Genesis and Gappa: processing, analyzing and visualizing phylogenetic (placement) data**. *Bioinformatics*, *36*(10), 3263–3265.
 
-6. Minh, B.Q., et al. (<a href="https://doi.org/10.1093/molbev/msaa015">2020</a>). **IQ-TREE 2: New models and efficient methods for phylogenetic inference in the genomic era**. *Molecular Biology and Evolution*, *37*(5), 1530–1534.
+6. Edge, P., et al. (<a href="https://doi.org/10.1101/gr.213462.116">2017</a>). **HapCUT2: robust and accurate haplotype assembly for diverse sequencing technologies**. *Genome Research*, *27*(5), 801-812.
 
-7. Katoh, K. & Standley, D.M. (<a href="https://doi.org/10.1093/molbev/mst010">2013</a>). **MAFFT multiple sequence alignment software version 7: Improvements in performance and usability**. *Molecular Biology and Evolution*, *30*(4), 772–780.
+7. Minh, B.Q., et al. (<a href="https://doi.org/10.1093/molbev/msaa015">2020</a>). **IQ-TREE 2: New models and efficient methods for phylogenetic inference in the genomic era**. *Molecular Biology and Evolution*, *37*(5), 1530–1534.
 
-8. Martin, M., et al. (<a href="https://doi.org/10.1101/085050">2016</a>). **WhatsHap: Fast and accurate read-based phasing**. *bioRxiv*.
+8. Katoh, K. & Standley, D.M. (<a href="https://doi.org/10.1093/molbev/mst010">2013</a>). **MAFFT multiple sequence alignment software version 7: Improvements in performance and usability**. *Molecular Biology and Evolution*, *30*(4), 772–780.
 
-9. Pagès, H., et al. (<a href="https://doi.org/10.18129/B9.bioc.Biostrings">2026</a>). **Biostrings: Efficient manipulation of biological strings**. *R package*.
+9. Martin, M., et al. (<a href="https://doi.org/10.1101/085050">2016</a>). **WhatsHap: Fast and accurate read-based phasing**. *bioRxiv*.
 
-10. Barrett, T., et al. (<a href="https://doi.org/10.32614/CRAN.package.data.table">2026</a>). **data.table: Extension of 'data.frame'**. *R package*.
+10. Pagès, H., et al. (<a href="https://doi.org/10.18129/B9.bioc.Biostrings">2026</a>). **Biostrings: Efficient manipulation of biological strings**. *R package*.
 
-11. Daniel, F. (<a href="https://cran.r-project.org/package=doSNOW">2022</a>). **doSNOW: Foreach Parallel Adaptor for the 'snow' Package**. *R package*.
+11. Barrett, T., et al. (<a href="https://doi.org/10.32614/CRAN.package.data.table">2026</a>). **data.table: Extension of 'data.frame'**. *R package*.
 
-12. White, J.M. & Jacobs, A. (<a href="https://doi.org/10.32614/CRAN.package.log4r">2024</a>). **log4r: A Fast and Lightweight Logging System for R, Based on 'log4j'**. *R package*.
+12. Daniel, F. (<a href="https://cran.r-project.org/package=doSNOW">2022</a>). **doSNOW: Foreach Parallel Adaptor for the 'snow' Package**. *R package*.
 
-13. Davis, T.L. (<a href="https://doi.org/10.32614/CRAN.package.optparse">2026</a>). **optparse: Command Line Option Parser**. *R package*.
+13. White, J.M. & Jacobs, A. (<a href="https://doi.org/10.32614/CRAN.package.log4r">2024</a>). **log4r: A Fast and Lightweight Logging System for R, Based on 'log4j'**. *R package*.
 
-14. Allaire, J.J., et al. (<a href="https://doi.org/10.32614/CRAN.package.rmarkdown">2026</a>). **rmarkdown: Dynamic Documents for R**. *R package*.
+14. Davis, T.L. (<a href="https://doi.org/10.32614/CRAN.package.optparse">2026</a>). **optparse: Command Line Option Parser**. *R package*.
 
-15. Wickham, H., et al. (<a href="https://doi.org/10.21105/joss.01686">2019</a>). **Welcome to the tidyverse**. *Journal of Open Source Software*, *4*(43), 1686.
+15. Allaire, J.J., et al. (<a href="https://doi.org/10.32614/CRAN.package.rmarkdown">2026</a>). **rmarkdown: Dynamic Documents for R**. *R package*.
 
-16. Stephens, J., et al. (<a href="https://doi.org/10.32614/CRAN.package.yaml">2025</a>). **yaml: Methods to Convert R Data to YAML and Back**. *R package*.
+16. Wickham, H., et al. (<a href="https://doi.org/10.21105/joss.01686">2019</a>). **Welcome to the tidyverse**. *Journal of Open Source Software*, *4*(43), 1686.
 
-17. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 5.1 Fable was used to generate `config.yaml` and `run_pipeline.R`. 
+17. Stephens, J., et al. (<a href="https://doi.org/10.32614/CRAN.package.yaml">2025</a>). **yaml: Methods to Convert R Data to YAML and Back**. *R package*.
+
+18. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 5.1 Fable was used to generate `config.yaml`, `run_pipeline.R`, and several functions in `codes/`. 
 
 ---
 *Last update: 20 October 2026 by Jeremias Ivan*
