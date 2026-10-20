@@ -93,7 +93,7 @@ f_variant_calling <- function(fn_target_loci, fn_bam, fn_vcf_gz, fn_vcf_gz_filte
     system(paste(exe_bcftools, "index -t", fn_vcf_gz_filtered))
 }
 
-# function: phasing
+# function: phasing with WhatsHap
 f_whatshap <- function(fn_target_loci, fn_vcf_gz_filtered, fn_bam, fn_phased_vcf, fn_blocks_whatshap, exe_whatshap) {
     cmd_whatshap <- paste(exe_whatshap, "phase",
                           "--reference", fn_target_loci,
@@ -107,6 +107,83 @@ f_whatshap <- function(fn_target_loci, fn_vcf_gz_filtered, fn_bam, fn_phased_vcf
 
     # extract variant coordinates
     system(paste(exe_whatshap, "stats --block-list", fn_blocks_whatshap, paste0(fn_phased_vcf, ".gz")))
+}
+
+# function: generate block list from a HapCUT2 haplotype block file (equivalent of whatshap stats --block-list; source: Claude)
+f_hapcut2_block_list <- function(fn_hapcut2_blocks, fn_out) {
+    # open the HapCUT2 block file
+    lines  <- readLines(fn_hapcut2_blocks)
+    starts <- grep("^BLOCK:", lines)
+    ends   <- c(starts[-1]-1, length(lines))
+
+    # iterate over blocks
+    ls_blocks <- list()
+    for (i in seq_along(starts)) {
+        # variant lines of this block (skip the "********" separator and blank lines)
+        block <- lines[(starts[i]+1):ends[i]]
+        block <- block[!grepl("^\\*|^\\s*$", block)]
+        if (length(block) == 0) {
+            next
+        }
+
+        # keep haplotype 1 allele (col 2), chromosome (col 4) and position (col 5)
+        block <- data.table::fread(text=block, header=FALSE, sep="\t",
+                                   select=c(2, 4, 5), col.names=c("hap1", "locus", "pos"), colClasses="character")
+        block$pos <- as.integer(block$pos)
+
+        # keep phased variants only ('-' = unphased or pruned by HapCUT2)
+        block <- block[block$hap1 %in% c("0", "1"), ]
+        if (nrow(block) < 2) {
+            next
+        }
+
+        # summarise the block
+        ls_blocks[[i]] <- data.table::data.table(sample   = sample,
+                                                 locus    = block$locus[1],
+                                                 PS       = min(block$pos),
+                                                 from     = min(block$pos),
+                                                 to       = max(block$pos),
+                                                 variants = nrow(block))
+    }
+
+    # combine and save
+    df_blocks <- data.table::rbindlist(ls_blocks)
+    data.table::fwrite(df_blocks, file=fn_out, sep="\t", quote=F)
+
+    return(df_blocks)
+}
+
+# function: phasing with HapCUT2
+f_hapcut2 <- function(fn_bam, fn_vcf, fn_fragment_out, prefix, fn_blocks_hapcut, exe_extracthairs, exe_hapcut2) {
+    # uncompressed the VCF file if it is compressed
+    if (grepl("\\.gz$", fn_vcf)) {
+        system(paste("gunzip -k", fn_vcf))
+        fn_vcf <- gsub("\\.gz$", "", fn_vcf)
+    }
+    
+    # run extractHAIRS
+    cmd_extracthairs <- paste(exe_extracthairs, 
+                              "--bam", fn_bam,
+                              "--VCF", fn_vcf,
+                              "--out", fn_fragment_out)
+    system(cmd_extracthairs)
+
+    # run HapCUT2
+    cmd_hapcut2 <- paste(exe_hapcut2,
+                         "--fragments", fn_fragment_out,
+                         "--VCF", fn_vcf,
+                         "--output", prefix)
+    system(cmd_hapcut2)
+
+    # rename files
+    file.rename(prefix, paste0(prefix, ".out"))
+    file.rename(paste0(prefix, ".phased.VCF"), paste0(prefix, ".phased.vcf"))
+
+    # compressed the output file
+    system(paste("bgzip -f", paste0(prefix, ".phased.vcf"), "&&", "tabix -f -p vcf", paste0(prefix, ".phased.vcf.gz")))
+
+    # extract variant coordinates
+    f_hapcut2_block_list(paste0(prefix, ".out"), fn_blocks_hapcut)
 }
 
 # function: generate haplotypes

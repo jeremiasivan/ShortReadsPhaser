@@ -22,7 +22,9 @@ params:
   exe_bcftools: "bcftools"
   exe_bwa: "bwa"
   exe_epa_ng: "epa-ng"
+  exe_extracthairs: "extractHAIRS"
   exe_gappa: "gappa"
+  exe_hapcut2: "HAPCUT2"
   exe_mafft: "mafft"
   exe_iqtree: "iqtree2"
   exe_samtools: "samtools"
@@ -39,7 +41,8 @@ params:
   # new sample (i.e., query)
   sample: ""
   dir_fastq_gz: ""
-  tool: "captus"
+  extraction_tool: "captus"
+  phasing_tool: "whatshap"
 
   # CAPTUS output (for tool=="captus")
   file_query_matches_flanked: ""

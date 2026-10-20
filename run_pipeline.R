@@ -61,7 +61,7 @@ cfg <- yaml::read_yaml(opt$config)
 required_fields <- c("codedir", "outdir",
                      "dir_backbone_alignment", "dir_backbone_genetrees",
                      "file_backbone_genetree_models", "file_taxonomy_metadata", "file_backbone_speciestree",
-                     "sample", "dir_fastq_gz", "tool")
+                     "sample", "dir_fastq_gz", "extraction_tool", "phasing_tool")
 
 # check if required fields are missing
 missing <- setdiff(required_fields, names(cfg))
@@ -82,16 +82,21 @@ f_check_exists(cfg$file_backbone_genetree_models, "file_backbone_genetree_models
 f_check_exists(cfg$file_taxonomy_metadata, "file_taxonomy_metadata")
 f_check_exists(cfg$file_backbone_speciestree, "file_backbone_speciestree")
 
-# check if tool is valid
-if (!tolower(cfg$tool) %in% c("captus", "hybpiper")) {
-    stop(paste("Invalid tool:", cfg$tool, "(must be 'captus' or 'hybpiper')"))
+# check if extraction_tool is valid
+if (!tolower(cfg$extraction_tool) %in% c("captus", "hybpiper")) {
+    stop(paste("Invalid extraction_tool:", cfg$extraction_tool, "(must be 'captus' or 'hybpiper')"))
+}
+
+# check if phasing_tool is valid
+if (!tolower(cfg$phasing_tool) %in% c("whatshap", "hapcut2")) {
+    stop(paste("Invalid phasing_tool:", cfg$phasing_tool, "(must be 'whatshap' or 'hapcut2')"))
 }
 
 # check if the input directories exist
-if (tolower(cfg$tool) == "captus") {
+if (tolower(cfg$extraction_tool) == "captus") {
   f_check_exists(cfg$file_query_matches_flanked, "file_query_matches_flanked")
   f_check_exists(cfg$file_query_matches_cds, "file_query_matches_cds")
-} else if (tolower(cfg$tool) == "hybpiper") {
+} else if (tolower(cfg$extraction_tool) == "hybpiper") {
   f_check_exists(cfg$dir_hybpiper_query_output, "dir_hybpiper_query_output", is_dir=TRUE)
 }
 
@@ -129,7 +134,9 @@ render_params <- list(
   exe_bcftools                  = f_get_param(cfg$exe_bcftools, "bcftools"),
   exe_bwa                       = f_get_param(cfg$exe_bwa, "bwa"),
   exe_epa_ng                    = f_get_param(cfg$exe_epa_ng, "epa-ng"),
+  exe_extracthairs              = f_get_param(cfg$exe_extracthairs, "extractHAIRS"),
   exe_gappa                     = f_get_param(cfg$exe_gappa, "gappa"),
+  exe_hapcut2                   = f_get_param(cfg$exe_hapcut2, "HAPCUT2"),
   exe_mafft                     = f_get_param(cfg$exe_mafft, "mafft"),
   exe_iqtree                    = f_get_param(cfg$exe_iqtree, "iqtree2"),
   exe_samtools                  = f_get_param(cfg$exe_samtools, "samtools"),
@@ -143,7 +150,8 @@ render_params <- list(
 
   sample                        = cfg$sample,
   dir_fastq_gz                  = cfg$dir_fastq_gz,
-  tool                          = tolower(cfg$tool),
+  extraction_tool               = tolower(cfg$extraction_tool),
+  phasing_tool                  = tolower(cfg$phasing_tool),
 
   file_query_matches_flanked    = cfg$file_query_matches_flanked,
   file_query_matches_cds        = cfg$file_query_matches_cds,

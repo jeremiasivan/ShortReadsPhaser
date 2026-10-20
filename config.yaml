@@ -13,15 +13,17 @@ thread:   1                               # number of parallel threads (default:
 redo:     FALSE                           # re-run even if output files exist (default: FALSE)
 
 # --- Executables ---------------------------------------------
-exe_amas:     "AMAS.py"                   # path to AMAS executable
-exe_bcftools: "bcftools"                  # path to bcftools executable
-exe_bwa:      "bwa"                       # path to BWA executable
-exe_epa_ng:   "epa-ng"                    # path to EPA-ng executable
-exe_gappa:    "gappa"                     # path to gappa executable
-exe_mafft:    "mafft"                     # path to MAFFT executable
-exe_iqtree:   "iqtree2"                   # path to IQ-TREE executable
-exe_samtools: "samtools"                  # path to samtools executable
-exe_whatshap: "whatshap"                  # path to WhatsHap executable
+exe_amas:         "AMAS.py"                   # path to AMAS executable
+exe_bcftools:     "bcftools"                  # path to bcftools executable
+exe_bwa:          "bwa"                       # path to BWA executable
+exe_epa_ng:       "epa-ng"                    # path to EPA-ng executable
+exe_extracthairs: "extractHAIRS"              # path to extractHAIRS executable
+exe_gappa:        "gappa"                     # path to gappa executable
+exe_hapcut2:      "HAPCUT2"                   # path to HapCUT2 executable
+exe_mafft:        "mafft"                     # path to MAFFT executable
+exe_iqtree:       "iqtree2"                   # path to IQ-TREE executable
+exe_samtools:     "samtools"                  # path to samtools executable
+exe_whatshap:     "whatshap"                  # path to WhatsHap executable
 
 # --- Backbone (reference) ------------------------------------
 dir_backbone_alignment:        ""         # directory of per-locus backbone alignments (<locus>.fna)
@@ -33,7 +35,8 @@ file_backbone_speciestree:     ""         # backbone species tree in Newick form
 # --- Query (new sample) --------------------------------------
 sample:                     ""            # sample name
 dir_fastq_gz:               ""            # directory of the paired-end reads (must be named <sample>_R1.fastq.gz and <sample>_R2.fastq.gz)
-tool:                       "captus"      # tool to generate the query matches (options: "captus" or "hybpiper"; default: "captus")
+extraction_tool:            "captus"      # tool to generate the query matches (options: "captus" or "hybpiper"; default: "captus")
+phasing_tool:               "whatshap"    # tool to phase the query matches (options: "whatshap" or "hapcut2"; default: "whatshap")
 
 # for CAPTUS (tool: "captus")
 file_query_matches_flanked: ""            # CAPTUS flanked matches of the sample (e.g., DNA_matches_flanked.fna)
