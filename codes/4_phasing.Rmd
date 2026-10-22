@@ -4,22 +4,65 @@ title: "Phase Individual Loci"
 
 ```{r, include=FALSE}
 # create output directories
-outdir_assignment <- file.path(currentdir, "06_assignment")
-outdir_phased     <- file.path(outdir_assignment, "03_phased")
-outdir_alignment  <- file.path(outdir_assignment, "04_alignment")
-outdir_tree       <- file.path(outdir_assignment, "05_tree")
+outdir_final      <- file.path(currentdir, "08_final")
+outdir_phased     <- file.path(outdir_final, "01_phased")
+outdir_alignment  <- file.path(outdir_final, "02_alignment")
+outdir_tree       <- file.path(outdir_final, "03_tree")
 sapply(c(outdir_phased, outdir_alignment, outdir_tree), function(x) {
   if (!dir.exists(x)) { dir.create(x, recursive=T) }})
 ```
 
 ```{r phased-loci}
+# per-block decisions
+df_decisions    <- as.data.frame(ls_results$blocks)
+df_decisions$PS <- as.character(df_decisions$PS)
+df_decisions$P  <- NA
+df_decisions$anchor_tier <- NA
+
+# decisions from the block pairing: a block inherits the anchor's decision (pairing I) or its opposite (pairing II)
+fn_anchor   <- file.path(outdir_pairing, "anchors.tsv")
+fn_pairings <- file.path(outdir_pairing, "block_pairings.tsv")
+
+if (all(file.exists(fn_anchor, fn_pairings))) {
+    # open input files
+    df_anchor   <- data.table::fread(fn_anchor)
+    df_pairings <- data.table::fread(fn_pairings)
+
+    # extract accepted blocks
+    df_pairings    <- df_pairings[df_pairings$accepted, ]
+    df_pairings$PS <- as.character(df_pairings$PS)
+
+    # merge with df_anchor
+    df_pairings <- as.data.frame(merge(df_pairings, df_anchor[, c("locus", "anchor_tier", "anchor_decision")], by="locus"))
+
+    # create a lookup table for keeping or flipping the blocks
+    flip <- c(keep="flip", flip="keep")
+    df_pairings$decision <- ifelse(df_pairings$pairing == "I", df_pairings$anchor_decision, flip[df_pairings$anchor_decision])
+    df_pairings$tier     <- "paired"
+
+    # report blocks whose paired decision contradicts their own placement
+    id_block     <- paste(df_decisions$locus, df_decisions$PS)
+    id_pairing   <- paste(df_pairings$locus, df_pairings$PS)
+
+    id_match     <- match(id_pairing, id_block)
+    is_conflict  <- df_decisions$decision[id_match] %in% c("keep", "flip") & df_decisions$decision[id_match] != df_pairings$decision
+    log4r::info(fn_logger, paste0("Block pairing: ", nrow(df_pairings), " blocks oriented by pairing, ",
+                                  sum(is_conflict), " contradicting their own placement decision"))
+
+    # extract all blocks, with paired decisions taking precedence
+    cols         <- c("locus", "PS", "decision", "tier", "P", "anchor_tier")
+    df_decisions <- rbind(df_decisions[!id_block %in% id_pairing, cols], df_pairings[, cols])
+}
+
+# set a criterion for a strict paired decision
+is_paired_strict <- df_decisions$tier == "paired" &
+                    df_decisions$anchor_tier == "both" &
+                    pmax(df_decisions$P, 1 - df_decisions$P) >= 0.99
+
 # create two sets of phased loci
-ls_sets <- list(both   = ls_results$blocks[ls_results$blocks$tier == "both", ],
-                single = ls_results$blocks[ls_results$blocks$tier %in% c("both", "single"), ])
-ls_sets <- lapply(ls_sets, function(x) {
-    x <- as.data.frame(x)
-    x[x$decision %in% c("keep", "flip"), ]
-})
+ls_sets <- list(both   = df_decisions[df_decisions$tier == "both" | is_paired_strict, ],
+                single = df_decisions[df_decisions$tier %in% c("both", "single", "paired"), ])
+ls_sets <- lapply(ls_sets, function(x) { x[x$decision %in% c("keep", "flip"), ] })
 sapply(names(ls_sets), function(x) { dir.create(file.path(outdir_phased, x), recursive=T, showWarnings=F) })
 
 # create doSNOW cluster

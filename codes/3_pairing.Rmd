@@ -1,0 +1,231 @@
+---
+title: "Pair Blocks within Loci"
+---
+
+```{r, include=FALSE}
+# create output directories
+outdir_pairing            <- file.path(currentdir, "07_pairing")
+outdir_pairing_candidates <- file.path(outdir_pairing, "01_candidates")
+outdir_pairing_mafftadd   <- file.path(outdir_pairing, "02_mafftadd")
+outdir_pairing_epa_ng     <- file.path(outdir_pairing, "03_epa_ng")
+sapply(c(outdir_pairing_candidates, outdir_pairing_mafftadd, outdir_pairing_epa_ng), function(x) {
+  if (!dir.exists(x)) { dir.create(x, recursive=T) }})
+```
+
+```{r pairing-candidates}
+# read the block assignments
+df_blocks_all    <- as.data.frame(data.table::fread(file.path(outdir_assignment, "block_assignments.tsv")))
+df_blocks_all$PS <- as.character(df_blocks_all$PS)
+
+# extract the list of loci
+ls_locus <- list.files(outdir_blocks_cds, pattern="_filtered\\.fna$", recursive=F, full.names=F)
+ls_locus <- gsub("_filtered\\.fna$", "", ls_locus)
+
+# iterate over loci
+ls_anchor <- lapply(ls_locus, function(locus) {
+    # open the alignment file
+    block_cds <- Biostrings::readBStringSet(file.path(outdir_blocks_cds, paste0(locus, "_filtered.fna")))
+
+    # extract all h1 CDS blocks
+    is_h1     <- grepl("_h1$", names(block_cds))
+
+    # extract the number of valid sites per block
+    n_sites   <- Biostrings::width(block_cds)[is_h1]
+    n_invalid <- Biostrings::letterFrequency(block_cds[is_h1], letters="Nn")[, 1]
+    df_sites  <- data.frame(PS      = gsub(".*_PS([^_]+)_h1$", "\\1", names(block_cds)[is_h1]),
+                            n_valid = n_sites - n_invalid)
+
+    # merge data.frames based on PS
+    df_blocks <- merge(df_sites, df_blocks_all[df_blocks_all$locus == locus, c("PS", "tier", "decision")],
+                       by="PS", all.x=TRUE)
+
+    # categories all NAs to be "none" and "ambiguous"
+    df_blocks$tier[is.na(df_blocks$tier)]         <- "none"
+    df_blocks$decision[is.na(df_blocks$decision)] <- "ambiguous"
+
+    # if there is only one CDS block, skip selection
+    if (nrow(df_blocks) < 2) {
+        return(NULL)
+    }
+
+    # select the anchor block
+    df_blocks <- df_blocks[order(match(df_blocks$tier, c("both", "single", "none")), -df_blocks$n_valid), ]
+    if (df_blocks$tier[1] == "none") {
+        return(NULL)
+    }
+    anchor_PS <- df_blocks$PS[1]
+
+    # write the candidate sequences
+    seq_candidates <- f_pairing_candidates(block_cds, locus, anchor_PS, df_blocks$PS[-1])
+    Biostrings::writeXStringSet(seq_candidates, filepath=file.path(outdir_pairing_candidates, paste0(locus, ".fna")))
+
+    # return data.frame
+    data.table::data.table(locus           = locus,
+                           anchor_PS       = anchor_PS,
+                           anchor_tier     = df_blocks$tier[1],
+                           anchor_decision = df_blocks$decision[1],
+                           anchor_n_valid  = df_blocks$n_valid[1],
+                           n_blocks        = nrow(df_blocks))
+})
+
+# save the anchors
+df_anchor <- data.table::rbindlist(ls_anchor)
+data.table::fwrite(df_anchor, file=file.path(outdir_pairing, "anchors.tsv"), sep="\t", quote=F)
+
+# update the log file
+log4r::info(fn_logger, paste0("Block pairing: ", nrow(df_anchor), " loci with an anchor",
+                              " (both-tier: ", sum(df_anchor$anchor_tier == "both"), ", ",
+                              "single-tier: ", sum(df_anchor$anchor_tier == "single"), "); ",
+                              sum(df_anchor$n_blocks) - nrow(df_anchor), " blocks to pair"))
+```
+
+```{r pairing-placement}
+# open the best model for each gene tree
+df_genetree_model <- data.table::fread(params$file_backbone_genetree_models)
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+registerDoSNOW(nwcl)
+
+# iterate over loci with candidates
+foreach (locus = df_anchor$locus) %dopar% {
+    # input files
+    fn_query    <- file.path(outdir_pairing_candidates, paste0(locus, ".fna"))
+    fn_ref      <- file.path(params$dir_backbone_alignment, paste0(locus, ".fna"))
+    fn_ref_tree <- file.path(params$dir_backbone_genetrees, paste0(locus, ".treefile"))
+    if (!all(file.exists(fn_query, fn_ref, fn_ref_tree))) {
+        return(NULL)
+    }
+
+    # MAFFT --add
+    fn_output_alignment <- file.path(outdir_pairing_mafftadd, paste0(locus, ".fna"))
+    f_mafft_add(fn_ref    = fn_ref,
+                fn_sample = fn_query,
+                fn_out    = fn_output_alignment,
+                exe_mafft = params$exe_mafft)
+
+    # remove '_R_' for reverse-complemented sequence
+    aln <- Biostrings::readBStringSet(fn_output_alignment)
+    names(aln) <- gsub("^_R_", "", names(aln))
+    Biostrings::writeXStringSet(aln, filepath=fn_output_alignment)
+
+    # split the reference and query sequences for EPA-NG
+    dir_output <- file.path(outdir_pairing_epa_ng, locus)
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+
+    fn_epa_ng_log <- file.path(dir_output, paste0(locus, ".log"))
+    system(paste(params$exe_epa_ng, "--split", fn_ref, fn_output_alignment, "-w", dir_output, ">>", fn_epa_ng_log))
+
+    # place the candidates on the gene tree
+    substitution_model <- f_iqtree2epa_ng_model(df_genetree_model$model[df_genetree_model$locus==locus])
+    if (is.null(substitution_model)) {
+        return(NULL)
+    }
+
+    f_epa_ng(fn_ref     = file.path(dir_output, "reference.fasta"),
+             fn_query   = file.path(dir_output, "query.fasta"),
+             fn_tree    = fn_ref_tree,
+             model      = substitution_model,
+             outdir     = dir_output,
+             fn_log     = fn_epa_ng_log,
+             exe_epa_ng = params$exe_epa_ng)
+
+    # translate placements into lineage name
+    f_gappa_assign(fn_jplace = file.path(dir_output, "epa_result.jplace"),
+                   fn_taxon  = params$file_taxonomy_metadata,
+                   threshold = params$min_consensus_thresh,
+                   outdir    = file.path(dir_output, "assign"),
+                   log_file  = fn_epa_ng_log,
+                   exe_gappa = params$exe_gappa)
+}
+
+stopCluster(nwcl)
+```
+
+```{r pairing-decision}
+# iterate over loci with candidates
+ls_pairings <- lapply(df_anchor$locus, function(locus) {
+    # check input files
+    fn_jplace    <- file.path(outdir_pairing_epa_ng, locus, "epa_result.jplace")
+    fn_per_query <- file.path(outdir_pairing_epa_ng, locus, "assign", "per_query.tsv")
+    if (!all(file.exists(fn_jplace, fn_per_query))) {
+        return(NULL)
+    }
+
+    # merge the two data.frames
+    df <- as.data.frame(merge(f_read_jplace_likelihood(fn_jplace),
+                              f_read_gappa_rank(fn_per_query, params$taxonomy_rank), by="name", all.x=TRUE))
+
+    # parse the candidate names: <locus>_A<anchor>[I|II]_PS<block>_h[12]
+    tag        <- sub("^.*_A([^_]+)_PS.*$", "\\1", df$name)
+    df$pairing <- sub("^[0-9]+", "", tag)
+    df$PS      <- sub("^.*_PS([^_]+)_h[12]$", "\\1", df$name)
+    df$hap     <- sub("^.*_(h[12])$", "\\1", df$name)
+
+    # anchor alone
+    a1 <- df[df$pairing == "" & df$hap == "h1", ]
+    a2 <- df[df$pairing == "" & df$hap == "h2", ]
+
+    # iterate over blocks
+    ls_blocks <- lapply(unique(df$PS[df$pairing != ""]), function(ps) {
+        # subset the data.frame with the respective PS
+        x   <- df[df$PS == ps, ]
+
+        # function: subset data.frame
+        subset_df <- function(pairing, hap) {
+            x[x$pairing == pairing & x$hap == hap, ]
+        }
+
+        # check if any haplotype does not exist
+        if (any(sapply(list(subset_df("I", "h1"), subset_df("I", "h2"), subset_df("II", "h1"), subset_df("II", "h2")), nrow) != 1)) {
+            return(NULL)
+        }
+
+        # extract delta log-likelihood between the two configurations
+        dLL <- (subset_df("I", "h1")$loglik + subset_df("I", "h2")$loglik) - (subset_df("II", "h1")$loglik + subset_df("II", "h2")$loglik)
+
+        # extract the probability that a configuration is favoured
+        P       <- 1 / (1 + exp(-dLL))
+        pairing <- ifelse(P >= params$min_alwr, "I", ifelse(P <= 1 - params$min_alwr, "II", "none"))
+
+        # function: compare lineages from two configurations
+        keep_lineage <- function(a, y) {
+            is.na(a$lineage) || a$aLWR < params$min_alwr || (!is.na(y$lineage) && y$lineage == a$lineage && y$aLWR >= params$min_alwr)
+        }
+
+        # compare each configuration with the anchor-only
+        if (pairing == "none") {
+            y1 <- data.frame(lineage=NA, aLWR=NA)
+            y2 <- y1
+        } else {
+            y1 <- subset_df(pairing, "h1")
+            y2 <- subset_df(pairing, "h2")
+        }
+        accepted <- pairing != "none" && keep_lineage(a1, y1) && keep_lineage(a2, y2)
+
+        # return output data.frame
+        data.table::data.table(locus = locus, anchor_PS = a1$PS, PS = ps,
+                               dLL = round(dLL, 3), P = round(P, 4), pairing = pairing,
+                               h1_lineage_anchor = a1$lineage, h1_aLWR_anchor = round(a1$aLWR, 4),
+                               h2_lineage_anchor = a2$lineage, h2_aLWR_anchor = round(a2$aLWR, 4),
+                               h1_lineage_paired = y1$lineage, h1_aLWR_paired = round(y1$aLWR, 4),
+                               h2_lineage_paired = y2$lineage, h2_aLWR_paired = round(y2$aLWR, 4),
+                               accepted = accepted)
+    })
+
+    # return summary data.frame across all blocks
+    data.table::rbindlist(ls_blocks)
+})
+
+# combine with the anchor decisions and save
+df_pairings <- data.table::rbindlist(ls_pairings)
+data.table::fwrite(df_pairings, file=file.path(outdir_pairing, "block_pairings.tsv"), sep="\t", quote=F)
+
+# update the log file
+readr::write_lines(c("", paste0("Block pairing: ", nrow(df_pairings), " blocks tested, ",
+                                sum(df_pairings$pairing != "none"), " with a pairing (P >= ", params$min_alwr, "), ",
+                                sum(df_pairings$accepted), " accepted after the lineage check")),
+                   file=fn_log, append=T)
+```

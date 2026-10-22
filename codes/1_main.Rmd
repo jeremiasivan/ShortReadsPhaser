@@ -103,7 +103,10 @@ knitr::opts_knit$set(root.dir=currentdir)
 ```{r child = file.path(path.expand(params$codedir), "codes", "2_run.Rmd")}
 ```
 
-```{r child = file.path(path.expand(params$codedir), "codes", "3_phasing.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "codes", "3_pairing.Rmd")}
+```
+
+```{r child = file.path(path.expand(params$codedir), "codes", "4_phasing.Rmd")}
 ```
 
 ```{r, include=FALSE}
