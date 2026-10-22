@@ -347,6 +347,7 @@ f_epa_ng <- function(fn_ref, fn_query, fn_tree, model, outdir, fn_log, exe_epa_n
                       "--tree", fn_tree,
                       "--model", model,
                       "--query", fn_query,
+                      "--filter-max 200 --filter-min-lwr 0.001 --filter-acc-lwr 0.999",
                       "-w", outdir, "--redo", ">>", fn_log)
   system(cmd_epa_ng)
 }
@@ -475,6 +476,91 @@ f_assign_blocks <- function(df_assign, min_alwr, input_lineage_A=NULL, input_lin
     }
 
     return(list(blocks=df_blocks, pairs=df_pairs, lineage_A=lineage_A, lineage_B=lineage_B))
+}
+
+# function: create all sequence pairs
+f_pairing_candidates <- function(block_cds, locus, anchor_PS, ls_PS) {
+    # function: extract haplotype
+    extract_hap <- function(ps, h) {
+        seq <- block_cds[[paste0(locus, "_PS", ps, "_h", h)]]
+        seq <- strsplit(toupper(as.character(seq)), "")[[1]]
+        return(seq)
+    }
+
+    # function: combine two sequences
+    combine <- function(seq1, seq2) {
+        # copy all valid seq2 bases to seq1
+        seq1[seq2 != "N"] <- seq2[seq2 != "N"]
+        seq1 <- paste(seq1, collapse="")
+        return(seq1)
+    }
+ 
+    # anchor haplotypes
+    A1  <- get_hap(anchor_PS, 1)
+    A2  <- get_hap(anchor_PS, 2)
+    tag <- paste0(locus, "_A", anchor_PS)
+ 
+    # anchor alone, then both pairings for every other block
+    seqs        <- c(paste(A1, collapse=""), paste(A2, collapse=""))
+    names(seqs) <- paste0(tag, "_PS", anchor_PS, c("_h1", "_h2"))
+
+    # iterate over blocks
+    for (ps in ls_PS) {
+        B1  <- get_hap(ps, 1)
+        B2  <- get_hap(ps, 2)
+
+        # combine the anchor haplotypes with the current block haplotypes
+        new <- c(combine(A1, B1), combine(A2, B2), combine(A1, B2), combine(A2, B1))
+        names(new) <- paste0(tag, c("I", "I", "II", "II"), "_PS", ps, c("_h1", "_h2", "_h1", "_h2"))
+        seqs <- c(seqs, new)
+    }
+ 
+    return(Biostrings::BStringSet(seqs))
+}
+
+# function: read jplace likelihoods
+f_read_jplace_likelihood <- function(fn_jplace) {
+    # read the jplace file
+    jp <- jsonlite::fromJSON(fn_jplace, simplifyVector=FALSE)
+
+    # extract the indices of the likelihood and like_weight_ratio fields
+    i_lik <- which(unlist(jp$fields) == "likelihood")
+    i_lwr <- which(unlist(jp$fields) == "like_weight_ratio")
+ 
+    # extract the likelihoods and like_weight_ratios for each placement
+    ls <- lapply(jp$placements, function(pq) {
+        p    <- do.call(rbind, lapply(pq$p, unlist))
+        name <- ifelse (!is.null(pq$n), unlist(pq$n)[1], unlist(pq$nm)[1])
+        data.table::data.table(name=name, loglik=max(p[, i_lik]), lwr_best=max(p[, i_lwr]))
+    })
+ 
+    return(data.table::rbindlist(ls))
+}
+
+# function: read gappa assignments at a specific taxonomic rank
+f_read_gappa_rank <- function(fn_per_query, tax_rank) {
+    if (file.size(fn_per_query) == 0) {
+        return(NULL)
+    }
+
+    # read the gappa per_query.tsv file
+    df <- data.table::fread(fn_per_query)
+    df$aLWR  <- as.numeric(df$aLWR)
+    df$depth <- lengths(strsplit(df$taxopath, ";"))
+ 
+    # extract the best taxonomic assignment per name
+    df <- df %>%
+            filter(depth == tax_rank) %>%
+            group_by(name) %>%
+            slice_max(aLWR, n=1, with_ties=FALSE)
+    if (nrow(df) == 0) {
+        return(NULL)
+    }
+
+    # extract the lineage at the specified taxonomic rank
+    df$lineage <- vapply(strsplit(df$taxopath, ";"), function(path) { path[tax_rank] }, character(1))
+ 
+    return(data.table::data.table(name=df$name, lineage=df$lineage, aLWR=df$aLWR))
 }
 
 # function: build phased locus from the consensus and the block haplotypes (source: Claude)
