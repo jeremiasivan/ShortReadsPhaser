@@ -14,7 +14,7 @@ sapply(c(outdir_pairing_candidates, outdir_pairing_mafftadd, outdir_pairing_epa_
 
 ```{r pairing-candidates}
 # read the block assignments
-df_blocks_all    <- data.table::fread(file.path(outdir_assignment, "block_assignments.tsv"))
+df_blocks_all    <- as.data.frame(data.table::fread(file.path(outdir_assignment, "block_assignments.tsv")))
 df_blocks_all$PS <- as.character(df_blocks_all$PS)
 
 # extract the list of loci

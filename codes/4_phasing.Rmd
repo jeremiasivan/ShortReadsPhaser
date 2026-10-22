@@ -22,7 +22,7 @@ df_decisions$anchor_tier <- NA
 # decisions from the block pairing: a block inherits the anchor's decision (pairing I) or its opposite (pairing II)
 fn_pairings <- file.path(currentdir, "07_pairing", "block_pairings.tsv")
 if (file.exists(fn_pairings)) {
-    df_pairings    <- data.table::fread(fn_pairings)
+    df_pairings    <- as.data.frame(data.table::fread(fn_pairings))
     df_pairings    <- df_pairings[df_pairings$accepted, ]
     df_pairings$PS <- as.character(df_pairings$PS)
 

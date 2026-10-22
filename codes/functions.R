@@ -481,7 +481,7 @@ f_assign_blocks <- function(df_assign, min_alwr, input_lineage_A=NULL, input_lin
 # function: create all sequence pairs
 f_pairing_candidates <- function(block_cds, locus, anchor_PS, ls_PS) {
     # function: extract haplotype
-    extract_hap <- function(ps, h) {
+    get_hap <- function(ps, h) {
         seq <- block_cds[[paste0(locus, "_PS", ps, "_h", h)]]
         seq <- strsplit(toupper(as.character(seq)), "")[[1]]
         return(seq)
