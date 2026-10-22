@@ -187,11 +187,11 @@ ls_pairings <- lapply(df_anchor$locus, function(locus) {
         dLL <- (subset_df("I", "h1")$loglik + subset_df("I", "h2")$loglik) - (subset_df("II", "h1")$loglik + subset_df("II", "h2")$loglik)
 
         # extract the probability that a configuration is favoured
-        P   <- 1 / (1 + exp(-dLL))
+        P       <- 1 / (1 + exp(-dLL))
         pairing <- ifelse(P >= params$min_alwr, "I", ifelse(P <= 1 - params$min_alwr, "II", "none"))
 
         # function: compare lineages from two configurations
-        keeps_lineage <- function(a, y) {
+        keep_lineage <- function(a, y) {
             is.na(a$lineage) || a$aLWR < params$min_alwr || (!is.na(y$lineage) && y$lineage == a$lineage && y$aLWR >= params$min_alwr)
         }
 
@@ -203,22 +203,24 @@ ls_pairings <- lapply(df_anchor$locus, function(locus) {
             y1 <- subset_df(pairing, "h1")
             y2 <- subset_df(pairing, "h2")
         }
-        accepted <- pairing != "none" && keeps_lineage(a1, y1) && keeps_lineage(a2, y2)
+        accepted <- pairing != "none" && keep_lineage(a1, y1) && keep_lineage(a2, y2)
 
         # return output data.frame
-        data.table::data.table(locus = locus, anchor_PS = a1$PS, PS = ps, dLL = round(dLL, 3), P = round(P, 4), pairing = pairing,
+        data.table::data.table(locus = locus, anchor_PS = a1$PS, PS = ps,
+                               dLL = round(dLL, 3), P = round(P, 4), pairing = pairing,
                                h1_lineage_anchor = a1$lineage, h1_aLWR_anchor = round(a1$aLWR, 4),
                                h2_lineage_anchor = a2$lineage, h2_aLWR_anchor = round(a2$aLWR, 4),
                                h1_lineage_paired = y1$lineage, h1_aLWR_paired = round(y1$aLWR, 4),
                                h2_lineage_paired = y2$lineage, h2_aLWR_paired = round(y2$aLWR, 4),
                                accepted = accepted)
     })
+
+    # return summary data.frame across all blocks
     data.table::rbindlist(ls_blocks)
 })
 
 # combine with the anchor decisions and save
 df_pairings <- data.table::rbindlist(ls_pairings)
-df_pairings <- merge(df_pairings, df_anchor[, c("locus", "anchor_tier", "anchor_decision")], by="locus")
 data.table::fwrite(df_pairings, file=file.path(outdir_pairing, "block_pairings.tsv"), sep="\t", quote=F)
 
 # update the log file
