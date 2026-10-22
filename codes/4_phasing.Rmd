@@ -33,7 +33,7 @@ if (all(file.exists(fn_anchor, fn_pairings))) {
     df_pairings$PS <- as.character(df_pairings$PS)
 
     # merge with df_anchor
-    df_pairings <- merge(df_pairings, df_anchor[, c("locus", "anchor_tier", "anchor_decision")], by="locus")
+    df_pairings <- as.data.frame(merge(df_pairings, df_anchor[, c("locus", "anchor_tier", "anchor_decision")], by="locus"))
 
     # create a lookup table for keeping or flipping the blocks
     flip <- c(keep="flip", flip="keep")
