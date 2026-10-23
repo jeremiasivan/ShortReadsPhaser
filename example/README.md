@@ -8,6 +8,7 @@ Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, wh
 - <a href="#04">Results: Mapping</a>
 - <a href="#05">Results: Phasing</a>
 - <a href="#06">Results: Species Tree Inference</a>
+- <a href="#07">Using Other Parameters</a>
 
 ## <a id="01">Raw Data</a>
 The raw short-read data are located at `/home/raw_data/MM/2018_short_reads/`. Each sample is labelled as `MMAA`, `MMAB`, `MMAC`, `MMBA`, etc., where:
@@ -40,7 +41,7 @@ We ran <a href="https://doi.org/10.1093/sysbio/syag046">CAPTUS</a> on the paired
 > [!NOTE]
 > Dataset from Ivan et al. (2026) does not have any *E. virginea* sample. The closest relative to *E. virginea* comes from *E. relicta*.
 
-In brief, CAPTUS starts by trimming the adaptors and cleaning the reads using BBTools. Then, it *de novo* assembles the reads using MEGAHIT, and extracts the target loci from the assembly using BLAT. This step generates two output files that are relevant to this pipeline:
+In brief, CAPTUS starts by trimming the adaptors and cleaning the reads using <a href="https://github.com/bbushnell/BBTools">BBTools</a>. Then, it *de novo* assembles the reads using <a href="https://doi.org/10.1093/bioinformatics/btv033">MEGAHIT</a>, and extracts the target loci from the assembly using <a href="https://doi.org/10.1101/gr.229202">BLAT</a>. This step generates two output files that are relevant to this pipeline:
 - `DNA_matches.fna`: individual hits of the target sequences
 - `DNA_matches_flanked.fna`: individual hits of the target sequences + additional flanking sequences
 
@@ -71,8 +72,7 @@ min_consensus_thresh <- 1.0
 ## <a id="04">Results: Mapping</a>
 
 ### Mapping 60x-coverage data to the 1,187 CAPTUS best hits
-After running CAPTUS on the 60x-coverage data, we mapped the cleaned short reads to the 1,187 CAPTUS best hits. We then assessed the mapping statistics as follows:
-
+After running CAPTUS on the 60x-coverage data, we mapped the cleaned short reads to the 1,187 CAPTUS best hits (`DNA_matches_flanked.fna`). We then assessed the mapping statistics as follows:
 ```
 $ samtools idxstats phylacis.dedup.bam | awk '{T+=$2} END {print T}'
   6160664
@@ -114,9 +114,9 @@ $ samtools flagstat phylacis.dedup.bam
   329849 + 0 with mate mapped to a different chr (mapQ>=5)
 ```
 
-GenomeScope2 estimated the genome size of meelup mallee to be roughly <a href="https://github.com/roblanf/MM_genome">530Mb</a> based on long sequencing reads, which means that the total length of the 1,187 BUSCO loci (~6.1Mb) accounts for **~1.2% of the genome**. After deduplication, the retained reads represent ~2.8% of the total reads, which is ~2.3x higher than expectation. In other words, the filtered BAM has over half off‑target reads (i.e., reads that do not come from the BUSCO loci). 
+<a href="https://doi.org/10.1038/s41467-020-14998-3">GenomeScope2</a> estimated the genome size of meelup mallee to be roughly <a href="https://github.com/roblanf/MM_genome">530Mb</a> based on long sequencing reads, which means that the total length of the 1,187 BUSCO loci (~6.1Mb, including flanking regions) accounts for **~1.2% of the genome**. If reads were sampled evenly across the genome, there are ~2.9 million reads that *truly* originate from these loci. However, there are ~6.9 million retained reads after deduplication, which is ~2.4x higher than expectation. In other words, the filtered BAM has over half off‑target reads (i.e., reads that do not come from the BUSCO loci).
 
-We then calculated the per-locus average mapping depth to assess if the extra mapped reads are localised or spread evenly across all loci. To do this, we first calculated the mapping depth of each CDS block using `samtools depth -a phylacis.dedup.bam`. Note that a single locus may contain multiple CDS blocks. The median mapping depth across all blocks is 62x, but the average is 105.89x, which reflects that the off-target reads are concentrated in a minority of positions. If we calculated the per-locus average mapping depth across all CDS blocks, there are 133 BUSCO loci with >=150 average depth (Fig. 1).
+We then calculated the per-locus average mapping depth to assess if the extra mapped reads are localised or spread evenly across all loci. To do this, we first calculated the mapping depth of each CDS block using `samtools depth -a phylacis.dedup.bam` (note that a single locus may contain multiple CDS blocks). The median mapping depth across all blocks is 62x, but the average is 105.89x, which reflects that the off-target reads are concentrated in a minority of positions. If we calculated the per-locus average mapping depth across all CDS blocks, there are 133 BUSCO loci with >=150 average depth (Fig. 1).
 
 ![Figure 1. Per-locus average mapping depth of the meelup mallee short-read data.](./figures/fig1.png)
 *<b>Figure 1.</b> Per-locus average mapping depth of the meelup mallee short-read data. Vertical red dashed lines denote the minimum and maximum depths during variant calling. Number of bins = 100.*
@@ -199,7 +199,7 @@ Among 721 blocks, 117 blocks (across 114 BUSCO loci) have confident placement fo
 *<b>Figure 7.</b> Correlation between pairwise genetic distances of the two meelup mallee haplotypes and those of the two parental lineages across 671 BUSCO. Dashed line represents x=y line.*
 
 ### Calculating the 'true' heterozygous sites called by WhatsHap
-We then calculated the 'true' heterozygous sites on the parental lineages that were called by WhatsHap. Here, we compared `phylacis_h0` to `relicta_CCA5717`, and `phylacis_h1` to `decipiens_CCA1310` (see <b><a href="#06">Results: Species Tree Inference</a></b>).
+We then calculated the 'true' heterozygous sites on the parental lineages that were called by WhatsHap. Here, we compared `phylacis_h0` to `relicta_CCA5717` and `phylacis_h1` to `decipiens_CCA1310` (see <b><a href="#06">Results: Species Tree Inference</a></b>).
 
 ```
 library(ape)
@@ -270,5 +270,46 @@ We inferred concatenated species trees using two sets of BUSCO loci: 114 BUSCO w
     - Haplotype two: sister to `relicta_CCA5717` (0.0084)
     - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0090)
 
+## <a id="07">Using Other Parameters</a>
+
+> [!NOTE]
+> ✅: consistent with output from `default` run<br>
+> ❌: inconsistent with output from `default` run
+
+### Using HybPiper
+Using HybPiper (`extraction_tool = "hybpiper"`) resulted in a smaller number retained BUSCO loci. Using the 101 BUSCO loci with confident placement for both haplotypes (-13 compared to the `default` run) results in an identical species tree topology with the `default` run. However, using the 636 BUSCO loci with confident placement for either haplotype (-35 compared to the `default` run) groups all phased and unphased haplotypes together with `decipiens_CCA1310`.
+- Phylogenetic placements on `101-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0054) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0077) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0109) ✅
+- Phylogenetic placements on `636-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0073) ✅
+    - Haplotype two: sister to `decipiens_CCA1310` (0.0219) ❌
+    - Unphased (CAPTUS best hits): sister to `decipiens_CCA1310` (0.0128) ❌
+
+### Using HapCUT2
+Using HapCUT2 (`phasing_tool = "hapcut2"`) resulted in a similar number of retained BUSCO loci, with an identical species tree topology and comparable branch lengths.
+- Phylogenetic placements on `110-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0037) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0059) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0097) ✅
+- Phylogenetic placements on `677-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0045) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0085) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0090) ✅
+
+### <a href="https://github.com/jeremiasivan/ShortReadsPhaser/tree/pairing">Adding a block-pairing test</a>
+As we tested the taxonomic placement of each CDS block individually using EPA-NG, informative-but-short blocks might not be confidently placed across gene trees. To address this, we incorporated an additional *pairing* step, where we selected an **anchor** block for each locus (i.e., a block with preferably confident placement for both or either haplotype) and assessed if stitching the anchor block with other blocks would increase the likelihood of the haplotype placements.
+
+We retrieved 127 BUSCO loci with confident placement for both haplotypes (+13 compared to the `default` run), and 700 BUSCO loci with confident placement for either haplotype (+29 compared to the `default` run). The species tree topology is exactly the same with the `default` run.
+- Phylogenetic placements on `127-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0042) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0067) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0092) ✅
+- Phylogenetic placements on `700-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0047) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0085) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0089) ✅
+
 ---
-*Last update: 20 October 2026 by Jeremias Ivan*
+*Last update: 23 October 2026 by Jeremias Ivan*
