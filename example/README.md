@@ -1,5 +1,5 @@
 # Example on meelup-mallee short reads
-Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, which are hypothesised to be *E. decipiens* and *E. virginea*. Here, we tested different parameters and assessed if we could consistenly recover the two parental lineages across loci. 
+Meelup mallee (*E. x phylacis*) is an F1 hybrid between two eucalypt species, which are hypothesised to be *E. decipiens* and *E. virginea* (<a href="https://doi.org/10.58828/nuy00653">Nicolle & French 2002</a>). Here, we tested different parameters and assessed if we could consistenly recover the two parental lineages across loci. 
 
 ## Table of Content
 - <a href="#01">Raw Data</a>
@@ -36,7 +36,7 @@ Here, we combined the `MML` and `MMR` short reads using `cat` command in Unix, s
     ```
 
 ## <a id="02">Running CAPTUS</a>
-We ran <a href="https://doi.org/10.1093/sysbio/syag046">CAPTUS</a> on the paired-end reads to extract 1,187 BUSCO loci from <a href="https://doi.org/10.64898/2026.09.25.753384">Ivan et al. (2026)</a> with default parameters. We used the `-d` flag during `captus extract` to set the target loci as miscellaneous DNA markers because the BUSCO sequences are not codons.
+We ran <a href="https://doi.org/10.1093/sysbio/syag046">CAPTUS</a> on the paired-end reads to extract 1,187 <a href="https://doi.org/10.1093/bioinformatics/btv351">BUSCO</a> loci from <a href="https://doi.org/10.64898/2026.09.25.753384">Ivan et al. (2026)</a> with default parameters. We used the `-d` flag during `captus extract` to set the target loci as miscellaneous DNA markers because the BUSCO sequences are not codons.
 
 > [!NOTE]
 > Dataset from Ivan et al. (2026) does not have any *E. virginea* sample. The closest relative to *E. virginea* comes from *E. relicta*.
@@ -114,7 +114,7 @@ $ samtools flagstat phylacis.dedup.bam
   329849 + 0 with mate mapped to a different chr (mapQ>=5)
 ```
 
-<a href="https://doi.org/10.1038/s41467-020-14998-3">GenomeScope2</a> estimated the genome size of meelup mallee to be roughly <a href="https://github.com/roblanf/MM_genome">530Mb</a> based on long sequencing reads, which means that the total length of the 1,187 BUSCO loci (~6.1Mb, including flanking regions) accounts for **~1.2% of the genome**. If reads were sampled evenly across the genome, there are ~2.9 million reads that *truly* originate from these loci. However, there are ~6.9 million retained reads after deduplication, which is ~2.4x higher than expectation. In other words, the filtered BAM has over half off‑target reads (i.e., reads that do not come from the BUSCO loci).
+<a href="https://doi.org/10.1038/s41467-020-14998-3">GenomeScope2</a> estimated the genome size of meelup mallee to be roughly <a href="https://github.com/roblanf/MM_genome">530Mb</a> based on long sequencing reads, which means that the total length of the 1,187 BUSCO loci (~6.1Mb, including flanking regions) accounts for **~1.2% of the genome**. If reads were sampled evenly across the genome, there should be ~2.9 million reads that *truly* originate from these loci. However, there are ~6.9 million retained reads after deduplication, which is ~2.4x higher than expectation. In other words, the filtered BAM has over half off‑target reads (i.e., reads that do not come from the BUSCO loci).
 
 We then calculated the per-locus average mapping depth to assess if the extra mapped reads are localised or spread evenly across all loci. To do this, we first calculated the mapping depth of each CDS block using `samtools depth -a phylacis.dedup.bam` (note that a single locus may contain multiple CDS blocks). The median mapping depth across all blocks is 62x, but the average is 105.89x, which reflects that the off-target reads are concentrated in a minority of positions. If we calculated the per-locus average mapping depth across all CDS blocks, there are 133 BUSCO loci with >=150 average depth (Fig. 1).
 
@@ -161,7 +161,7 @@ Across 1,186 BUSCO where *both* were found, the average pairwise genetic distanc
 ![Figure 2. Distribution of pairwise genetic distance between decipiens_CCA1310 and relicta_CCA5717 across 1,186 BUSCO loci.](./figures/fig2.png)
 *<b>Figure 2.</b> Distribution of pairwise genetic distance between `decipiens_CCA1310` and `relicta_CCA5717` across 1,186 BUSCO loci. Vertical red line denotes the average across loci. Number of bins = 100.*
 
-### Assessing the performance of WhatsHap
+### Assessing the performance of <a href="https://doi.org/10.1093/bioinformatics/btv351">WhatsHap</a>
 We calculated and compared the number of heterozygous sites per locus called by Bcftools and WhatsHap using:
 ```
 $ bcftools view -H -v snps -i 'GT="het"' phylacis.filtered.vcf.gz | cut -f1 | sort | uniq -c > per_locus_het.tsv
@@ -174,7 +174,7 @@ The number of heterozygous SNVs called by Bcftools ranges between 1 to 898 (aver
 *<b>Figure 3.</b> Distribution of heterozygous SNVs across 1,187 BUSCO called by Bcftools and WhatsHap.*
 
 ### Calculating the pairwise genetic distance between the meelup mallee haplotypes
-Across 1,187 BUSCO loci (4,713 CDS blocks), we excluded four BUSCO loci (7 CDS blocks) with no recovered haplotypes. We then ran EPA-NG on individual blocks, and found that the most common parental lineages recovered are `Curviptera` and `Falcatae` (which represent the series of *E. virginea* and *E. decipiens*, respectively).
+Across 1,187 BUSCO loci (4,713 CDS blocks), we excluded four BUSCO loci (7 CDS blocks) with no recovered haplotypes. We then ran <a href="https://doi.org/10.1093/sysbio/syy054">EPA-NG</a> on individual blocks, and found that the most common parental lineages recovered are `Curviptera` and `Falcatae` (which represent the series of *E. virginea* and *E. decipiens*, respectively).
 
 Across the 4,676 blocks, there were 3,205 blocks unresolved at series-level (`taxonomic_rank==3`), while the rest (1,471 blocks) can be categorised as:
 
@@ -247,7 +247,7 @@ out <- do.call(rbind, lapply(files, function(f) {
 }))
 ```
 
-Across 114 BUSCO loci, the proportion of correctly-called variants for `phylacis_h0` (in regards to `relicta_CCA5717`) ranges between 9.5% to 100% (average=73.9%; Fig. 7 (green)), while `phylacis_h1` (in regards to `decipiens_CCA1310`) has 16.1-100% correctly-called variants (average=84.8%; Fig. 7 (blue)). Considering both criteria results in a lower average of 59.5% (Fig. 7 (red)), with 0-14.8% (average=0.63%) variants swapped (i.e., `phylacis_h0` follows the `decipiens_CCA1310` alleles, and vice versa) across 114 loci. The results are also comparable when using the 671 BUSCO loci (Fig. 8), showing <b>a higher calling rate for the 'true' *E. decipiens*-specific alleles compared to those from *E. relicta*</b>.
+Across 114 BUSCO loci, the proportion of correctly-called variants for `phylacis_h0` (in regards to `relicta_CCA5717`) ranges between 9.5% to 100% (average=73.9%; Fig. 7 (green)), while `phylacis_h1` (in regards to `decipiens_CCA1310`) has 16.1-100% correctly-called variants (average=84.8%; Fig. 7 (blue)). Considering both criteria results in a lower average of 59.5% (Fig. 7 (red)), with 0-14.8% (average=0.63%) variants swapped (i.e., `phylacis_h0` follows the `decipiens_CCA1310` alleles, and vice versa) across 114 loci. The results are also comparable when using the 671 BUSCO loci (Fig. 8), showing <b>a higher calling rate for the 'true' *E. decipiens*-specific alleles compared to those from *E. relicta*</b>. However, note that: (i) we use *E. relicta* instead of *E. virginea* as a reference sample, and (ii) the two reference samples are **not** the true parents of the meelup-mallee sample, as the hybrid species is approximately 6,400 years old (<a href="https://doi.org/10.1016/S0006-3207(98)00119-0">Rossetto et al. 1999</a>).
 
 ![Figure 8. Proportion of correctly-called variants across 114 BUSCO.](./figures/fig8.png)
 *<b>Figure 8.</b> Proportion of correctly-called variants across 114 BUSCO. Colours denote different criterion used.*
@@ -256,7 +256,7 @@ Across 114 BUSCO loci, the proportion of correctly-called variants for `phylacis
 *<b>Figure 9.</b> Proportion of correctly-called variants across 671 BUSCO. Colours denote different criterion used.*
 
 ## <a id="06">Results: Species Tree Inference</a>
-We inferred concatenated species trees using two sets of BUSCO loci: 114 BUSCO with confident placement for both haplotypes, and 671 BUSCO loci with confident placement for both *or* either haplotype. Figure 9 shows the placement of each haplotype on the concatenated tree subsetted from the full 704-tip tree (701 samples from Ivan et al. (2026) + 1 unphased meelup mallee haplotype + 2 phased meelup mallee haplotypes). <b>The unphased `phylacis_captus` and the phased `phylacis_h0` are closely-related to `relicta_CCA5717`, while `phylacis_h1` is more closely-related to `decipiens_CCA1310`</b>.
+We inferred concatenated Maximum-Likelihood species trees using two sets of BUSCO loci: 114 BUSCO with confident placement for both haplotypes, and 671 BUSCO loci with confident placement for both *or* either haplotype. Figure 9 shows the placement of each haplotype on the concatenated tree subsetted from the full 704-tip tree (701 samples from Ivan et al. (2026) + 1 unphased meelup mallee haplotype + 2 phased meelup mallee haplotypes). <b>The unphased `phylacis_captus` and the phased `phylacis_h0` are closely-related to `relicta_CCA5717`, while `phylacis_h1` is more closely-related to `decipiens_CCA1310`</b>.
 
 ![Figure 10. Subsetted concatenated phylogenetic tree inferred from 114 BUSCO loci.](./figures/fig10.png)
 *<b>Figure 10.</b> Subsetted concatenated phylogenetic tree inferred from 114 BUSCO loci. The tree is rooted at `raveretiana_CCA1669` from distantly-related sect.* Domesticae. *Colours denote the two meelup mallee haplotypes (blue) and unphased haplotype (red).*
@@ -276,7 +276,7 @@ We inferred concatenated species trees using two sets of BUSCO loci: 114 BUSCO w
 > ✅: consistent with output from `default` run<br>
 > ❌: inconsistent with output from `default` run
 
-### Using HybPiper
+### Using <a href="https://doi.org/10.3732/apps.1600016">HybPiper</a>
 Using HybPiper (`extraction_tool = "hybpiper"`) resulted in a smaller number retained BUSCO loci. Using the 101 BUSCO loci with confident placement for both haplotypes (-13 compared to the `default` run) results in an identical species tree topology with the `default` run. However, using the 636 BUSCO loci with confident placement for either haplotype (-35 compared to the `default` run) groups all phased and unphased haplotypes together with `decipiens_CCA1310`.
 - Phylogenetic placements on `101-BUSCO` tree (branch lengths):
     - Haplotype one: sister to `decipiens_CCA1310` (0.0054) ✅
@@ -287,7 +287,7 @@ Using HybPiper (`extraction_tool = "hybpiper"`) resulted in a smaller number ret
     - Haplotype two: sister to `decipiens_CCA1310` (0.0219) ❌
     - Unphased (CAPTUS best hits): sister to `decipiens_CCA1310` (0.0128) ❌
 
-### Using HapCUT2
+### Using <a href="https://doi.org/10.1101/gr.213462.116">HapCUT2</a>
 Using HapCUT2 (`phasing_tool = "hapcut2"`) resulted in a similar number of retained BUSCO loci, with an identical species tree topology and comparable branch lengths.
 - Phylogenetic placements on `110-BUSCO` tree (branch lengths):
     - Haplotype one: sister to `decipiens_CCA1310` (0.0037) ✅
@@ -311,5 +311,16 @@ We retrieved 127 BUSCO loci with confident placement for both haplotypes (+13 co
     - Haplotype two: sister to `relicta_CCA5717` (0.0085) ✅
     - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0089) ✅
 
+### Using stricter depth criteria
+Following Figure 1, we set a higher `min_depth = 40` and a lower `max_depth = 80` during variant calling. We retained a smaller number of loci compared to the `default` parameters, but the species tree placements of the two haplotypes are consistent with the previous results.
+- Phylogenetic placements on `99-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0032) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0056) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0092) ✅
+- Phylogenetic placements on `642-BUSCO` tree (branch lengths):
+    - Haplotype one: sister to `decipiens_CCA1310` (0.0039) ✅
+    - Haplotype two: sister to `relicta_CCA5717` (0.0077) ✅
+    - Unphased (CAPTUS best hits): sister to `relicta_CCA5717` (0.0095) ✅
+
 ---
-*Last update: 23 October 2026 by Jeremias Ivan*
+*Last update: 28 October 2026 by Jeremias Ivan*
